@@ -1,9 +1,11 @@
--- NOVAHUB: Phase 1.5 (Full UI + Config + Anti-AFK)
+-- NOVAHUB: Phase 2 (Auto Farm + UI)
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local VirtualUser = game:GetService("VirtualUser")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -11,12 +13,16 @@ local LocalPlayer = Players.LocalPlayer
 local oldGui = CoreGui:FindFirstChild("NOVAHUB")
 if oldGui then oldGui:Destroy() end
 
+-- State Variables
+local States = { AntiAFK = false, AutoFarm = false, FastAttack = false }
+local Config = { FarmRange = 30, AttackSpeed = 0.1 }
+
 -- Theme Setup
 local Theme = {
     Bg = Color3.fromRGB(24, 24, 27),
     SidebarBg = Color3.fromRGB(18, 18, 20),
     PanelBg = Color3.fromRGB(33, 33, 36),
-    Accent = Color3.fromRGB(138, 43, 226), -- Purple
+    Accent = Color3.fromRGB(138, 43, 226),
     Text = Color3.fromRGB(240, 240, 240),
     SubText = Color3.fromRGB(170, 170, 170),
     ToggleOff = Color3.fromRGB(75, 75, 80),
@@ -32,8 +38,6 @@ local ColorList = {
 }
 local currentFontIndex = 1
 local currentColorIndex = 1
-
-local States = { AntiAFK = false }
 
 -- 1. Main GUI
 local ScreenGui = Instance.new("ScreenGui")
@@ -353,6 +357,65 @@ local function createButton(parent, text, yPos, callback)
     btn.MouseButton1Click:Connect(callback)
 end
 
+local function createSlider(parent, text, yPos, min, max, default, callback)
+    local frame = Instance.new("Frame", parent)
+    frame.Size = UDim2.new(1, -20, 0, 45)
+    frame.Position = UDim2.new(0, 5, 0, yPos)
+    frame.BackgroundColor3 = Theme.PanelBg
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 4)
+
+    local lbl = Instance.new("TextLabel", frame)
+    lbl.Size = UDim2.new(1, -20, 0, 15)
+    lbl.Position = UDim2.new(0, 10, 0, 5)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text .. ": " .. default
+    lbl.TextColor3 = Theme.Text
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 11
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local bg = Instance.new("Frame", frame)
+    bg.Size = UDim2.new(1, -20, 0, 6)
+    bg.Position = UDim2.new(0, 10, 0, 28)
+    bg.BackgroundColor3 = Theme.ToggleOff
+    Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
+
+    local fill = Instance.new("Frame", bg)
+    fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    fill.BackgroundColor3 = Theme.Accent
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+
+    local knob = Instance.new("Frame", bg)
+    knob.Size = UDim2.new(0, 12, 0, 12)
+    knob.Position = UDim2.new((default - min) / (max - min), -6, 0.5, -6)
+    knob.BackgroundColor3 = Theme.Text
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+    local dragging = false
+    local function update(input)
+        local pos = math.clamp((input.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
+        fill.Size = UDim2.new(pos, 0, 1, 0)
+        knob.Position = UDim2.new(pos, -6, 0.5, -6)
+        local val = math.floor(min + (pos * (max - min)))
+        lbl.Text = text .. ": " .. val
+        callback(val)
+    end
+
+    bg.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true; update(input)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            update(input)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+    end)
+end
+
 -- 6. Build Pages
 local Home = Pages["Home"]
 createSection(Home, "Welcome!", 0)
@@ -368,15 +431,14 @@ welcomeDesc.TextXAlignment = Enum.TextXAlignment.Left
 
 local Farm = Pages["Farming"]
 createSection(Farm, "Farming", 0)
-createToggle(Farm, "Auto Farm", 40, false, function(s) print("Auto Farm:", s) end)
-createDropdown(Farm, "Select Method", {"Level", "Boss", "Chest"}, 80, function(opt) print("Method:", opt) end)
-createToggle(Farm, "Auto Set Spawn", 120, false, function(s) print("Auto Set Spawn:", s) end)
+createToggle(Farm, "Auto Farm", 40, false, function(s) States.AutoFarm = s end)
+createDropdown(Farm, "Select Method", {"Enemies", "Players"}, 80, function(opt) print("Method:", opt) end)
+createSlider(Farm, "Farm Range", 120, 10, 150, 30, function(v) Config.FarmRange = v end)
 
 local Combat = Pages["Combat"]
 createSection(Combat, "Combat", 0)
-createToggle(Combat, "Auto Bounty", 40, false, function(s) print("Auto Bounty:", s) end)
-createToggle(Combat, "Auto Sword", 80, false, function(s) print("Auto Sword:", s) end)
-createToggle(Combat, "Auto Gun", 120, false, function(s) print("Auto Gun:", s) end)
+createToggle(Combat, "Fast Attack", 40, false, function(s) States.FastAttack = s end)
+createSlider(Combat, "Attack Speed (x100)", 80, 1, 50, 10, function(v) Config.AttackSpeed = v / 100 end)
 
 local Teleport = Pages["Teleport"]
 createSection(Teleport, "Teleport", 0)
@@ -391,8 +453,17 @@ createToggle(Shop, "Auto Buy Sword", 80, false, function(s) print("Auto Sword:",
 
 local Misc = Pages["Misc"]
 createSection(Misc, "Misc", 0)
-createToggle(Misc, "Anti-AFK", 40, false, function(s) States.AntiAFK = s end)
-createToggle(Misc, "Fullbright", 80, false, function(s) print("Fullbright:", s) end)
+createToggle(Misc, "Fullbright", 40, false, function(s) 
+    if s then
+        game.Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+        game.Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+        game.Lighting.Brightness = 2
+    else
+        game.Lighting.Ambient = Color3.fromRGB(70, 70, 70)
+        game.Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+        game.Lighting.Brightness = 1
+    end
+end)
 
 local Config = Pages["Config"]
 createSection(Config, "UI Config", 0)
@@ -406,12 +477,9 @@ createButton(Config, "Change Accent Color", 40, function()
     CloseBtn.TextColor3 = newColor
     openStroke.Color = newColor
     OpenBtn.BackgroundColor3 = newColor
-    -- Update all active tab highlights
     for _, b in pairs(TabButtons) do
-        if b.BackgroundTransparency == 0 then
-            b:GetChildren()[2].TextColor3 = newColor
-        end
-        b:GetChildren()[1].TextColor3 = newColor -- Icon
+        if b.BackgroundTransparency == 0 then b:GetChildren()[2].TextColor3 = newColor end
+        b:GetChildren()[1].TextColor3 = newColor
     end
     print("Color changed to:", ColorList[currentColorIndex].Name)
 end)
@@ -422,12 +490,9 @@ createButton(Config, "Change Font Style", 80, function()
     Title.Font = newFont
     SubTitle.Font = newFont
     welcomeDesc.Font = newFont
-    -- Update all text in all pages
     for _, p in pairs(Pages) do
         for _, obj in pairs(p:GetDescendants()) do
-            if obj:IsA("TextLabel") or obj:IsA("TextButton") then
-                obj.Font = newFont
-            end
+            if obj:IsA("TextLabel") or obj:IsA("TextButton") then obj.Font = newFont end
         end
     end
     print("Font changed.")
@@ -445,13 +510,67 @@ TabButtons[1].BackgroundColor3 = Theme.PanelBg
 TabButtons[1]:GetChildren()[2].TextColor3 = Theme.Accent
 Pages["Home"].Visible = true
 
--- 7. Anti-AFK Logic
+-- 7. Logic Engine
 LocalPlayer.Idled:Connect(function()
     if States.AntiAFK then
         VirtualUser:CaptureController()
         VirtualUser:ClickButton2(Vector2.new())
-        print("Anti-AFK triggered.")
     end
 end)
 
-print("NOVAHUB Phase 1.5 Loaded.")
+-- Combat Remote Function
+local function doMeleeAttack()
+    -- Blox Fruits melee remote (bypasses tool requirement)
+    local combatRemote = ReplicatedStorage:FindFirstChild("Combat")
+    if combatRemote and combatRemote:FindFirstChild("RemoteEvent") then
+        combatRemote.RemoteEvent:FireServer("Button1", true)
+    else
+        -- Fallback for tools
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChildOfClass("Tool") then
+            char:FindFirstChildOfClass("Tool"):Activate()
+        end
+    end
+end
+
+-- Fast Attack Loop
+RunService.Heartbeat:Connect(function()
+    if States.FastAttack then
+        doMeleeAttack()
+        task.wait(Config.AttackSpeed)
+    end
+end)
+
+-- Auto Farm Loop
+RunService.Heartbeat:Connect(function()
+    if not States.AutoFarm then return end
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+
+    local closestEnemy = nil
+    local shortestDist = math.huge
+    local enemies = workspace:FindFirstChild("Enemies")
+
+    if enemies then
+        for _, v in pairs(enemies:GetChildren()) do
+            if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                local dist = (char.HumanoidRootPart.Position - v.HumanoidRootPart.Position).Magnitude
+                if dist < shortestDist and dist <= Config.FarmRange then
+                    shortestDist = dist
+                    closestEnemy = v
+                end
+            end
+        end
+    end
+
+    if closestEnemy then
+        -- Teleport to enemy
+        if shortestDist > 5 then
+            char.HumanoidRootPart.CFrame = closestEnemy.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+        end
+        -- Attack
+        doMeleeAttack()
+    end
+end))
+
+print("NOVAHUB Phase 2 Loaded.")
