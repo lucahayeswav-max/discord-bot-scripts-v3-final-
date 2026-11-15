@@ -5,6 +5,7 @@ local TweenService=game:GetService("TweenService")
 local CoreGui=game:GetService("CoreGui")
 local VirtualUser=game:GetService("VirtualUser")
 local Lighting=game:GetService("Lighting")
+local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local LP=Players.LocalPlayer
 
 if CoreGui:FindFirstChild("NOVAHUB") then CoreGui.NOVAHUB:Destroy() end
@@ -14,6 +15,50 @@ local Theme={Bg=Color3.fromRGB(24,24,27),SidebarBg=Color3.fromRGB(18,18,20),Pane
 local FontList={Enum.Font.Gotham,Enum.Font.SourceSans,Enum.Font.Arial}
 local ColorList={Color3.fromRGB(138,43,226),Color3.fromRGB(0,150,255),Color3.fromRGB(255,50,50),Color3.fromRGB(50,255,50)}
 local fIdx,cIdx=1,1
+
+local QuestNPCs = {
+    ["Sword Dealer"]=1,["Military Soldier"]=2,["Magician"]=3,["Hokage"]=4,["Blacksmith"]=5,["Fishman"]=6
+}
+
+-- Teleport Locations
+local Locations = {
+    ["First Sea"] = {
+        ["Starter Island"] = CFrame.new(1059, 16, 1547),
+        ["Marine Fortress"] = CFrame.new(-4888, 71, 4254),
+        ["Jungle"] = CFrame.new(-1250, 25, 340),
+        ["Buggy Island"] = CFrame.new(-1150, 25, 3800),
+        ["Sky Island"] = CFrame.new(-4600, 800, -1000),
+        ["Pirate Village"] = CFrame.new(-1100, 20, 4300)
+    },
+    ["Second Sea"] = {
+        ["Kingdom of Rose"] = CFrame.new(-623, 17, 3965),
+        ["Green Zone"] = CFrame.new(-200, 20, 3500),
+        ["Snow Island"] = CFrame.new(1100, 40, 4200),
+        ["Cursed Ship"] = CFrame.new(915, 125, 32700),
+        ["Ice Castle"] = CFrame.new(-5000, 40, 4000),
+        ["Forgotten Island"] = CFrame.new(-3000, 30, 2000)
+    },
+    ["Third Sea"] = {
+        ["Port Town"] = CFrame.new(-280, 22, 1168),
+        ["Great Tree"] = CFrame.new(1750, 100, 1000),
+        ["Hydra Island"] = CFrame.new(5000, 30, 1000),
+        ["Castle on the Sea"] = CFrame.new(-5000, 50, -1000),
+        ["Haunted Castle"] = CFrame.new(-9000, 100, 5000),
+        ["Peanut Island"] = CFrame.new(2000, 20, -2000)
+    }
+}
+
+-- Robust Teleport Function
+local function Teleport(CF)
+    local ch = LP.Character
+    if ch and ch:FindFirstChild("HumanoidRootPart") then
+        local hrp = ch.HumanoidRootPart
+        hrp.Anchored = true
+        hrp.CFrame = CF
+        task.wait(0.1)
+        hrp.Anchored = false
+    end
+end
 
 local SG=Instance.new("ScreenGui",CoreGui)
 SG.Name="NOVAHUB"
@@ -304,21 +349,21 @@ AiLbl.Font=Enum.Font.GothamSemibold
 AiLbl.TextSize=12
 AiLbl.TextXAlignment=Enum.TextXAlignment.Left
 
-MakeToggle(Pages["Farming"],"Auto Farm (TP + Hit)",40,false,function(s) States.AutoFarm=s end)
+MakeToggle(Pages["Farming"],"Auto Farm (TP to Enemy)",40,false,function(s) States.AutoFarm=s end)
 MakeSlider(Pages["Farming"],"Farm Range",80,10,150,30,function(v) Config.FarmRange=v end)
 MakeToggle(Pages["Farming"],"Auto Accept Quests",130,false,function(s) States.AutoQuests=s end)
 
-local Teleport=Pages["Teleport"]
-MakeSection(Teleport,"First Sea",0)
-MakeBtn(Teleport,"Bandit",40,function() if LP.Character then LP.Character.HumanoidRootPart.CFrame=CFrame.new(1059,16,1547) end end)
-MakeBtn(Teleport,"Marine Fortress",80,function() if LP.Character then LP.Character.HumanoidRootPart.CFrame=CFrame.new(-4888,71,4254) end end)
-MakeBtn(Teleport,"Sky Island",120,function() if LP.Character then LP.Character.HumanoidRootPart.CFrame=CFrame.new(-4600,800,-1000) end end)
-MakeSection(Teleport,"Second Sea",170)
-MakeBtn(Teleport,"Cursed Ship",210,function() if LP.Character then LP.Character.HumanoidRootPart.CFrame=CFrame.new(915,125,32700) end end)
-MakeBtn(Teleport,"Kingdom of Rose",250,function() if LP.Character then LP.Character.HumanoidRootPart.CFrame=CFrame.new(-623,17,3965) end end)
-MakeSection(Teleport,"Third Sea",300)
-MakeBtn(Teleport,"Port Town",340,function() if LP.Character then LP.Character.HumanoidRootPart.CFrame=CFrame.new(-280,22,1168) end end)
-MakeBtn(Teleport,"Great Tree",380,function() if LP.Character then LP.Character.HumanoidRootPart.CFrame=CFrame.new(1750,100,1000) end end)
+local TeleportTab=Pages["Teleport"]
+local currentY = 0
+for seaName, islands in pairs(Locations) do
+    MakeSection(TeleportTab, seaName, currentY)
+    currentY = currentY + 40
+    for islandName, cf in pairs(islands) do
+        MakeBtn(TeleportTab, islandName, currentY, function() Teleport(cf) end)
+        currentY = currentY + 35
+    end
+    currentY = currentY + 10
+end
 
 MakeToggle(Pages["Misc"],"Fullbright",40,false,function(s)
     if s then Lighting.Ambient=Color3.fromRGB(255,255,255);Lighting.OutdoorAmbient=Color3.fromRGB(255,255,255);Lighting.Brightness=2
@@ -339,7 +384,7 @@ MakeBtn(Pages["Config"],"Change Font",80,function()
 end)
 MakeToggle(Pages["Config"],"Anti-AFK",120,false,function(s) States.AntiAFK=s end)
 
-for _,p in pairs(Pages) do p.CanvasSize=UDim2.new(0,0,0,#p:GetChildren()*45+50) end
+for _,p in pairs(Pages) do p.CanvasSize=UDim2.new(0,0,0,#p:GetChildren()*35+50) end
 TabBtns[1].BackgroundTransparency=0
 TabBtns[1].BackgroundColor3=Theme.PanelBg
 TabBtns[1]:GetChildren()[2].TextColor3=Theme.Accent
@@ -348,14 +393,13 @@ Pages["Home"].Visible=true
 LP.Idled:Connect(function() if States.AntiAFK then VirtualUser:CaptureController();VirtualUser:ClickButton2(Vector2.new()) end end)
 
 task.spawn(function()
-    while task.wait(1) do
+    while task.wait(2) do
         if States.AutoQuests then
             local ch=LP.Character
             if ch and ch:FindFirstChild("HumanoidRootPart") then
-                -- Find the closest Quest NPC (they have a specific BillboardGui or name)
                 local closestNPC, shortDist = nil, math.huge
                 for _, v in pairs(workspace:GetChildren()) do
-                    if v:IsA("Model") and (v.Name:find("Quest") or v.Name:find("Dealer") or v.Name:find("Military") or v.Name:find("Soldier")) then
+                    if v:IsA("Model") and QuestNPCs[v.Name] then
                         if v:FindFirstChild("HumanoidRootPart") then
                             local d = (ch.HumanoidRootPart.Position - v.HumanoidRootPart.Position).Magnitude
                             if d < shortDist then shortDist = d; closestNPC = v end
@@ -363,12 +407,12 @@ task.spawn(function()
                     end
                 end
                 if closestNPC then
-                    ch.HumanoidRootPart.CFrame = closestNPC.HumanoidRootPart.CFrame * CFrame.new(0,0,3)
+                    Teleport(closestNPC.HumanoidRootPart.CFrame * CFrame.new(0,0,3))
                     task.wait(0.5)
-                    -- Fire the accept quest remote
-                    local args = {[1] = "StartQuest", [2] = closestNPC.Name}
-                    pcall(function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer(unpack(args)) end)
-                    task.wait(1)
+                    local questId = QuestNPCs[closestNPC.Name]
+                    local args = {[1] = "StartQuest", [2] = closestNPC.Name, [3] = questId}
+                    pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(args)) end)
+                    task.wait(2)
                 end
             end
         end
@@ -390,10 +434,7 @@ RunService.Heartbeat:Connect(function()
         end
     end
     if closest then
-        if shortest>5 then ch.HumanoidRootPart.CFrame=closest.HumanoidRootPart.CFrame*CFrame.new(0,0,3) end
-        -- Attack logic fallback (since user is using third-party autoclicker)
-        local tool = ch:FindFirstChildOfClass("Tool")
-        if tool then pcall(function() tool:Activate() end) end
+        if shortest>5 then Teleport(closest.HumanoidRootPart.CFrame*CFrame.new(0,0,3)) end
     end
 end)
 print("NOVAHUB Loaded.")
