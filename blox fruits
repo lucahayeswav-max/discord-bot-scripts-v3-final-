@@ -8,7 +8,7 @@ local Lighting=game:GetService("Lighting")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local LP=Players.LocalPlayer
 
--- Pull config from the other file (Change YOUR_GITHUB_LINK_HERE to your raw link for config.lua)
+-- Pull config from the other file
 local ConfigData = loadstring(game:HttpGet("https://raw.githubusercontent.com/lucahayeswav-max/discord-bot-scripts-v3-final-/main/config.lua"))()
 local Theme = ConfigData.Theme
 local QuestNPCs = ConfigData.QuestNPCs
@@ -83,6 +83,20 @@ minBtn.Font=Enum.Font.GothamBold
 minBtn.TextSize=22
 minBtn.AutoButtonColor=false
 Instance.new("UICorner",minBtn).CornerRadius=UDim.new(0,8)
+
+local openBtn=Instance.new("TextButton",gui)
+openBtn.Size=UDim2.fromOffset(40,40)
+openBtn.Position=UDim2.new(0,20,0.5,-20)
+openBtn.BackgroundColor3=Theme.Accent
+openBtn.Text="N"
+openBtn.TextColor3=Theme.Text
+openBtn.Font=Enum.Font.GothamBold
+openBtn.TextSize=20
+openBtn.Visible=false
+Instance.new("UICorner",openBtn).CornerRadius=UDim.new(1,0)
+
+minBtn.MouseButton1Click:Connect(function() main.Visible=false;openBtn.Visible=true end)
+openBtn.MouseButton1Click:Connect(function() main.Visible=true;openBtn.Visible=false end)
 
 local close=Instance.new("TextButton",top)
 close.Size=UDim2.fromOffset(35,35)
