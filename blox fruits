@@ -8,8 +8,8 @@ local Lighting=game:GetService("Lighting")
 local LP=Players.LocalPlayer
 
 if CoreGui:FindFirstChild("NOVAHUB") then CoreGui.NOVAHUB:Destroy() end
-local States={AutoFarm=false,AutoClicker=false,KillAura=false,AntiAFK=false}
-local Config={FarmRange=30,ClickDelay=0.1,AuraRange=30}
+local States={AutoFarm=false,AutoQuests=false,AntiAFK=false}
+local Config={FarmRange=30}
 local Theme={Bg=Color3.fromRGB(24,24,27),SidebarBg=Color3.fromRGB(18,18,20),PanelBg=Color3.fromRGB(33,33,36),Accent=Color3.fromRGB(138,43,226),Text=Color3.fromRGB(240,240,240),SubText=Color3.fromRGB(170,170,170),ToggleOff=Color3.fromRGB(75,75,80)}
 local FontList={Enum.Font.Gotham,Enum.Font.SourceSans,Enum.Font.Arial}
 local ColorList={Color3.fromRGB(138,43,226),Color3.fromRGB(0,150,255),Color3.fromRGB(255,50,50),Color3.fromRGB(50,255,50)}
@@ -306,11 +306,7 @@ AiLbl.TextXAlignment=Enum.TextXAlignment.Left
 
 MakeToggle(Pages["Farming"],"Auto Farm (TP + Hit)",40,false,function(s) States.AutoFarm=s end)
 MakeSlider(Pages["Farming"],"Farm Range",80,10,150,30,function(v) Config.FarmRange=v end)
-
-MakeToggle(Pages["Combat"],"Auto Clicker",40,false,function(s) States.AutoClicker=s end)
-MakeSlider(Pages["Combat"],"Click Speed (x100)",80,1,50,10,function(v) Config.ClickDelay=v/100 end)
-MakeToggle(Pages["Combat"],"Kill Aura",130,false,function(s) States.KillAura=s end)
-MakeSlider(Pages["Combat"],"Aura Range",170,10,100,30,function(v) Config.AuraRange=v end)
+MakeToggle(Pages["Farming"],"Auto Accept Quests",130,false,function(s) States.AutoQuests=s end)
 
 local Teleport=Pages["Teleport"]
 MakeSection(Teleport,"First Sea",0)
@@ -351,50 +347,53 @@ Pages["Home"].Visible=true
 
 LP.Idled:Connect(function() if States.AntiAFK then VirtualUser:CaptureController();VirtualUser:ClickButton2(Vector2.new()) end end)
 
-local function Click()
-    pcall(function()
-        VirtualUser:CaptureController()
-        VirtualUser:ClickButton1(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
-    end)
-end
-
 task.spawn(function()
-    while task.wait(Config.ClickDelay) do
-        if States.AutoClicker then Click() end
+    while task.wait(1) do
+        if States.AutoQuests then
+            local ch=LP.Character
+            if ch and ch:FindFirstChild("HumanoidRootPart") then
+                -- Find the closest Quest NPC (they have a specific BillboardGui or name)
+                local closestNPC, shortDist = nil, math.huge
+                for _, v in pairs(workspace:GetChildren()) do
+                    if v:IsA("Model") and (v.Name:find("Quest") or v.Name:find("Dealer") or v.Name:find("Military") or v.Name:find("Soldier")) then
+                        if v:FindFirstChild("HumanoidRootPart") then
+                            local d = (ch.HumanoidRootPart.Position - v.HumanoidRootPart.Position).Magnitude
+                            if d < shortDist then shortDist = d; closestNPC = v end
+                        end
+                    end
+                end
+                if closestNPC then
+                    ch.HumanoidRootPart.CFrame = closestNPC.HumanoidRootPart.CFrame * CFrame.new(0,0,3)
+                    task.wait(0.5)
+                    -- Fire the accept quest remote
+                    local args = {[1] = "StartQuest", [2] = closestNPC.Name}
+                    pcall(function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer(unpack(args)) end)
+                    task.wait(1)
+                end
+            end
+        end
     end
 end)
 
 RunService.Heartbeat:Connect(function()
+    if not States.AutoFarm then return end
     local ch=LP.Character
     if not ch or not ch:FindFirstChild("HumanoidRootPart") then return end
-    
-    if States.KillAura then
-        local en=workspace:FindFirstChild("Enemies")
-        if en then
-            for _,v in pairs(en:GetChildren()) do
-                if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health>0 then
-                    local d=(ch.HumanoidRootPart.Position-v.HumanoidRootPart.Position).Magnitude
-                    if d<=Config.AuraRange then Click() end
-                end
+    local closest,shortest=nil,math.huge
+    local en=workspace:FindFirstChild("Enemies")
+    if en then
+        for _,v in pairs(en:GetChildren()) do
+            if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health>0 then
+                local d=(ch.HumanoidRootPart.Position-v.HumanoidRootPart.Position).Magnitude
+                if d<shortest and d<=Config.FarmRange then shortest=d;closest=v end
             end
         end
     end
-
-    if States.AutoFarm then
-        local closest,shortest=nil,math.huge
-        local en=workspace:FindFirstChild("Enemies")
-        if en then
-            for _,v in pairs(en:GetChildren()) do
-                if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health>0 then
-                    local d=(ch.HumanoidRootPart.Position-v.HumanoidRootPart.Position).Magnitude
-                    if d<shortest and d<=Config.FarmRange then shortest=d;closest=v end
-                end
-            end
-        end
-        if closest then
-            if shortest>5 then ch.HumanoidRootPart.CFrame=closest.HumanoidRootPart.CFrame*CFrame.new(0,0,3) end
-            Click()
-        end
+    if closest then
+        if shortest>5 then ch.HumanoidRootPart.CFrame=closest.HumanoidRootPart.CFrame*CFrame.new(0,0,3) end
+        -- Attack logic fallback (since user is using third-party autoclicker)
+        local tool = ch:FindFirstChildOfClass("Tool")
+        if tool then pcall(function() tool:Activate() end) end
     end
 end)
 print("NOVAHUB Loaded.")
