@@ -1,4 +1,3 @@
--- NOVAHUB: Part 1 (Setup & UI)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -7,42 +6,28 @@ local CoreGui = game:GetService("CoreGui")
 local VirtualUser = game:GetService("VirtualUser")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Lighting = game:GetService("Lighting")
+local LP = Players.LocalPlayer
 
-local LocalPlayer = Players.LocalPlayer
+if CoreGui:FindFirstChild("NOVAHUB") then CoreGui.NOVAHUB:Destroy() end
 
-local oldGui = CoreGui:FindFirstChild("NOVAHUB")
-if oldGui then oldGui:Destroy() end
-
-local States = { AntiAFK = false, AutoFarm = false, FastAttack = false }
+local States = { AutoFarm = false, FastAttack = false, AntiAFK = false }
 local Config = { FarmRange = 30, AttackSpeed = 0.1 }
-
 local Theme = {
-    Bg = Color3.fromRGB(24, 24, 27),
-    SidebarBg = Color3.fromRGB(18, 18, 20),
-    PanelBg = Color3.fromRGB(33, 33, 36),
-    Accent = Color3.fromRGB(138, 43, 226),
-    Text = Color3.fromRGB(240, 240, 240),
-    SubText = Color3.fromRGB(170, 170, 170),
-    ToggleOff = Color3.fromRGB(75, 75, 80),
+    Bg = Color3.fromRGB(24, 24, 27), SidebarBg = Color3.fromRGB(18, 18, 20),
+    PanelBg = Color3.fromRGB(33, 33, 36), Accent = Color3.fromRGB(138, 43, 226),
+    Text = Color3.fromRGB(240, 240, 240), SubText = Color3.fromRGB(170, 170, 170),
+    ToggleOff = Color3.fromRGB(75, 75, 80)
 }
-
 local FontList = {Enum.Font.Gotham, Enum.Font.SourceSans, Enum.Font.Arial}
-local ColorList = {
-    {Name = "Purple", Color = Color3.fromRGB(138, 43, 226)},
-    {Name = "Blue", Color = Color3.fromRGB(0, 150, 255)},
-    {Name = "Red", Color = Color3.fromRGB(255, 50, 50)},
-    {Name = "Green", Color = Color3.fromRGB(50, 255, 50)},
-    {Name = "Yellow", Color = Color3.fromRGB(255, 255, 0)}
-}
-local currentFontIndex = 1
-local currentColorIndex = 1
+local ColorList = {Color3.fromRGB(138, 43, 226), Color3.fromRGB(0, 150, 255), Color3.fromRGB(255, 50, 50), Color3.fromRGB(50, 255, 50)}
+local fIdx, cIdx = 1, 1
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "NOVAHUB"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = CoreGui
+local SG = Instance.new("ScreenGui")
+SG.Name = "NOVAHUB"
+SG.ResetOnSpawn = false
+SG.Parent = CoreGui
 
-local OpenBtn = Instance.new("TextButton", ScreenGui)
+local OpenBtn = Instance.new("TextButton", SG)
 OpenBtn.Size = UDim2.new(0, 40, 0, 40)
 OpenBtn.Position = UDim2.new(0, 20, 0.5, -20)
 OpenBtn.BackgroundColor3 = Theme.Accent
@@ -51,47 +36,42 @@ OpenBtn.TextColor3 = Theme.Text
 OpenBtn.Font = Enum.Font.GothamBold
 OpenBtn.TextSize = 20
 OpenBtn.Visible = false
-OpenBtn.AutoButtonColor = false
 Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(1, 0)
-local openStroke = Instance.new("UIStroke", OpenBtn)
-openStroke.Color = Theme.Text
-openStroke.Thickness = 1.5
 
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 500, 0, 300)
-MainFrame.Position = UDim2.new(0.5, -250, 0.5, -150)
-MainFrame.BackgroundColor3 = Theme.Bg
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.ClipsDescendants = true
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
-
-local Stroke = Instance.new("UIStroke", MainFrame)
+local Main = Instance.new("Frame", SG)
+Main.Size = UDim2.new(0, 500, 0, 300)
+Main.Position = UDim2.new(0.5, -250, 0.5, -150)
+Main.BackgroundColor3 = Theme.Bg
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.ClipsDescendants = true
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 8)
+local Stroke = Instance.new("UIStroke", Main)
 Stroke.Color = Theme.Accent
 Stroke.Thickness = 1.5
 
-local dragging, dragInput, dragStart, startPos
-MainFrame.InputBegan:Connect(function(input)
+local drag, dragIn, dragStart, startPos
+Main.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
+        drag = true
         dragStart = input.Position
-        startPos = MainFrame.Position
+        startPos = Main.Position
         input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            if input.UserInputState == Enum.UserInputState.End then drag = false end
         end)
     end
 end)
-MainFrame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+Main.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragIn = input end
 end)
 UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
+    if input == dragIn and drag then
         local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
 
-local TopBar = Instance.new("Frame", MainFrame)
+local TopBar = Instance.new("Frame", Main)
 TopBar.Size = UDim2.new(1, 0, 0, 35)
 TopBar.BackgroundTransparency = 1
 
@@ -131,44 +111,41 @@ CloseBtn.Text = "✕"
 CloseBtn.TextColor3 = Theme.Accent
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.TextSize = 14
-CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false; OpenBtn.Visible = true end)
-OpenBtn.MouseButton1Click:Connect(function() MainFrame.Visible = true; OpenBtn.Visible = false end)
+CloseBtn.MouseButton1Click:Connect(function() Main.Visible = false; OpenBtn.Visible = true end)
+OpenBtn.MouseButton1Click:Connect(function() Main.Visible = true; OpenBtn.Visible = false end)
 
-local Sidebar = Instance.new("Frame", MainFrame)
+local Sidebar = Instance.new("Frame", Main)
 Sidebar.Size = UDim2.new(0, 130, 1, -35)
 Sidebar.Position = UDim2.new(0, 0, 0, 35)
 Sidebar.BackgroundColor3 = Theme.SidebarBg
 Sidebar.BorderSizePixel = 0
 
-local ContentArea = Instance.new("Frame", MainFrame)
-ContentArea.Size = UDim2.new(1, -130, 1, -35)
-ContentArea.Position = UDim2.new(0, 130, 0, 35)
-ContentArea.BackgroundTransparency = 1
+local Content = Instance.new("Frame", Main)
+Content.Size = UDim2.new(1, -130, 1, -35)
+Content.Position = UDim2.new(0, 130, 0, 35)
+Content.BackgroundTransparency = 1
 
 local Tabs = {"Home", "Farming", "Combat", "Teleport", "Shop", "Misc", "Config"}
-local TabIcons = {"⌂", "⚙", "⚔", "💎", "👕", "★", "⚙"}
-local TabButtons = {}
-local Pages = {}
+local Icons = {"⌂", "⚙", "⚔", "💎", "👕", "★", "⚙"}
+local TabBtns, Pages = {}, {}
 
-local function createSidebarTab(name, iconText, yPos)
+for i, name in ipairs(Tabs) do
     local btn = Instance.new("TextButton", Sidebar)
     btn.Size = UDim2.new(1, -16, 0, 30)
-    btn.Position = UDim2.new(0, 8, 0, yPos)
-    btn.BackgroundColor3 = Theme.Bg
+    btn.Position = UDim2.new(0, 8, 0, (i - 1) * 35 + 5)
     btn.BackgroundTransparency = 1
     btn.Text = ""
-    btn.AutoButtonColor = false
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
-
+    
     local icon = Instance.new("TextLabel", btn)
     icon.Size = UDim2.new(0, 20, 0, 20)
     icon.Position = UDim2.new(0, 5, 0.5, -10)
     icon.BackgroundTransparency = 1
-    icon.Text = iconText
+    icon.Text = Icons[i]
     icon.TextColor3 = Theme.Accent
     icon.Font = Enum.Font.GothamBold
     icon.TextSize = 14
-
+    
     local lbl = Instance.new("TextLabel", btn)
     lbl.Size = UDim2.new(1, -30, 1, 0)
     lbl.Position = UDim2.new(0, 30, 0, 0)
@@ -178,27 +155,24 @@ local function createSidebarTab(name, iconText, yPos)
     lbl.Font = Enum.Font.GothamSemibold
     lbl.TextSize = 12
     lbl.TextXAlignment = Enum.TextXAlignment.Left
-
-    local page = Instance.new("ScrollingFrame", ContentArea)
+    
+    local page = Instance.new("ScrollingFrame", Content)
     page.Size = UDim2.new(1, -20, 1, -15)
     page.Position = UDim2.new(0, 10, 0, 5)
     page.BackgroundTransparency = 1
     page.ScrollBarThickness = 2
     page.ScrollBarImageColor3 = Theme.Accent
     page.Visible = false
-    page.Name = name
-    page.CanvasSize = UDim2.new(0, 0, 0, 0)
     
-    table.insert(TabButtons, btn)
+    table.insert(TabBtns, btn)
     Pages[name] = page
-
+    
     btn.MouseButton1Click:Connect(function()
-        for _, b in pairs(TabButtons) do
+        for _, b in ipairs(TabBtns) do
             b.BackgroundTransparency = 1
             b:GetChildren()[2].TextColor3 = Theme.SubText
         end
         for _, p in pairs(Pages) do p.Visible = false end
-        
         btn.BackgroundTransparency = 0
         btn.BackgroundColor3 = Theme.PanelBg
         btn:GetChildren()[2].TextColor3 = Theme.Accent
@@ -206,357 +180,158 @@ local function createSidebarTab(name, iconText, yPos)
     end)
 end
 
-for i, tabName in ipairs(Tabs) do
-    createSidebarTab(tabName, TabIcons[i], (i - 1) * 35 + 5)
-end
--- NOVAHUB: Part 2 (UI Elements & Tabs)
-
-local function createSection(parent, title, yPos)
-    local frame = Instance.new("Frame", parent)
-    frame.Size = UDim2.new(1, -10, 0, 35)
-    frame.Position = UDim2.new(0, 5, 0, yPos)
-    frame.BackgroundColor3 = Theme.PanelBg
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 4)
-
-    local accent = Instance.new("Frame", frame)
-    accent.Size = UDim2.new(0, 3, 0, 12)
-    accent.Position = UDim2.new(0, 10, 0.5, -6)
-    accent.BackgroundColor3 = Theme.Accent
-    Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
-
-    local lbl = Instance.new("TextLabel", frame)
-    lbl.Size = UDim2.new(1, -30, 1, 0)
-    lbl.Position = UDim2.new(0, 20, 0, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = title
-    lbl.TextColor3 = Theme.Text
-    lbl.Font = Enum.Font.GothamBold
-    lbl.TextSize = 12
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-end
-
-local function createToggle(parent, text, yPos, default, callback)
-    local frame = Instance.new("Frame", parent)
-    frame.Size = UDim2.new(1, -20, 0, 35)
-    frame.Position = UDim2.new(0, 5, 0, yPos)
-    frame.BackgroundColor3 = Theme.PanelBg
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 4)
-
-    local lbl = Instance.new("TextLabel", frame)
-    lbl.Size = UDim2.new(1, -50, 1, 0)
-    lbl.Position = UDim2.new(0, 10, 0, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = text
-    lbl.TextColor3 = Theme.Text
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextSize = 12
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-
-    local switch = Instance.new("TextButton", frame)
-    switch.Size = UDim2.new(0, 30, 0, 16)
-    switch.Position = UDim2.new(1, -40, 0.5, -8)
-    switch.BackgroundColor3 = default and Theme.Accent or Theme.ToggleOff
-    switch.Text = ""
-    switch.AutoButtonColor = false
-    Instance.new("UICorner", switch).CornerRadius = UDim.new(1, 0)
-
-    local circle = Instance.new("Frame", switch)
-    circle.Size = UDim2.new(0, 12, 0, 12)
-    circle.Position = default and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
-    circle.BackgroundColor3 = Theme.Text
-    Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
-
-    local state = default
-    switch.MouseButton1Click:Connect(function()
-        state = not state
-        local tween = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        TweenService:Create(switch, tween, {BackgroundColor3 = state and Theme.Accent or Theme.ToggleOff}):Play()
-        TweenService:Create(circle, tween, {Position = state and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)}):Play()
-        callback(state)
+local function MakeToggle(parent, text, y, def, cb)
+    local f = Instance.new("Frame", parent)
+    f.Size = UDim2.new(1, -20, 0, 35)
+    f.Position = UDim2.new(0, 5, 0, y)
+    f.BackgroundColor3 = Theme.PanelBg
+    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
+    local l = Instance.new("TextLabel", f)
+    l.Size = UDim2.new(1, -50, 1, 0)
+    l.Position = UDim2.new(0, 10, 0, 0)
+    l.BackgroundTransparency = 1
+    l.Text = text
+    l.TextColor3 = Theme.Text
+    l.Font = Enum.Font.Gotham
+    l.TextSize = 12
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    local s = Instance.new("TextButton", f)
+    s.Size = UDim2.new(0, 30, 0, 16)
+    s.Position = UDim2.new(1, -40, 0.5, -8)
+    s.BackgroundColor3 = def and Theme.Accent or Theme.ToggleOff
+    s.Text = ""
+    s.AutoButtonColor = false
+    Instance.new("UICorner", s).CornerRadius = UDim.new(1, 0)
+    local c = Instance.new("Frame", s)
+    c.Size = UDim2.new(0, 12, 0, 12)
+    c.Position = def and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
+    c.BackgroundColor3 = Theme.Text
+    Instance.new("UICorner", c).CornerRadius = UDim.new(1, 0)
+    local st = def
+    s.MouseButton1Click:Connect(function()
+        st = not st
+        TweenService:Create(s, TweenInfo.new(0.2), {BackgroundColor3 = st and Theme.Accent or Theme.ToggleOff}):Play()
+        TweenService:Create(c, TweenInfo.new(0.2), {Position = st and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)}):Play()
+        cb(st)
     end)
 end
 
-local function createDropdown(parent, text, options, yPos, callback)
-    local frame = Instance.new("Frame", parent)
-    frame.Size = UDim2.new(1, -20, 0, 35)
-    frame.Position = UDim2.new(0, 5, 0, yPos)
-    frame.BackgroundColor3 = Theme.PanelBg
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 4)
-
-    local lbl = Instance.new("TextLabel", frame)
-    lbl.Size = UDim2.new(1, -120, 1, 0)
-    lbl.Position = UDim2.new(0, 10, 0, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = text
-    lbl.TextColor3 = Theme.Text
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextSize = 12
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-
-    local dropBtn = Instance.new("TextButton", frame)
-    dropBtn.Size = UDim2.new(0, 90, 0, 22)
-    dropBtn.Position = UDim2.new(1, -100, 0.5, -11)
-    dropBtn.BackgroundColor3 = Theme.Bg
-    dropBtn.Text = options[1]
-    dropBtn.TextColor3 = Theme.Text
-    dropBtn.Font = Enum.Font.Gotham
-    dropBtn.TextSize = 11
-    Instance.new("UICorner", dropBtn).CornerRadius = UDim.new(0, 4)
-
-    local isOpen = false
-    local dropMenu = Instance.new("Frame", frame)
-    dropMenu.Size = UDim2.new(0, 90, 0, #options * 25)
-    dropMenu.Position = UDim2.new(1, -100, 1, 0)
-    dropMenu.BackgroundColor3 = Theme.SidebarBg
-    dropMenu.Visible = false
-    dropMenu.ZIndex = 10
-    Instance.new("UICorner", dropMenu).CornerRadius = UDim.new(0, 4)
-
-    for i, opt in ipairs(options) do
-        local optBtn = Instance.new("TextButton", dropMenu)
-        optBtn.Size = UDim2.new(1, 0, 0, 25)
-        optBtn.Position = UDim2.new(0, 0, 0, (i - 1) * 25)
-        optBtn.BackgroundTransparency = 1
-        optBtn.Text = opt
-        optBtn.TextColor3 = Theme.SubText
-        optBtn.Font = Enum.Font.Gotham
-        optBtn.TextSize = 11
-        optBtn.ZIndex = 11
-        
-        optBtn.MouseButton1Click:Connect(function()
-            dropBtn.Text = opt
-            dropMenu.Visible = false
-            isOpen = false
-            callback(opt)
-        end)
-    end
-
-    dropBtn.MouseButton1Click:Connect(function()
-        isOpen = not isOpen
-        dropMenu.Visible = isOpen
-    end)
-end
-
-local function createButton(parent, text, yPos, callback)
-    local btn = Instance.new("TextButton", parent)
-    btn.Size = UDim2.new(1, -20, 0, 30)
-    btn.Position = UDim2.new(0, 5, 0, yPos)
-    btn.BackgroundColor3 = Theme.PanelBg
-    btn.Text = text
-    btn.TextColor3 = Theme.Text
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 12
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
-    btn.MouseButton1Click:Connect(callback)
-end
-
-local function createSlider(parent, text, yPos, min, max, default, callback)
-    local frame = Instance.new("Frame", parent)
-    frame.Size = UDim2.new(1, -20, 0, 45)
-    frame.Position = UDim2.new(0, 5, 0, yPos)
-    frame.BackgroundColor3 = Theme.PanelBg
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 4)
-
-    local lbl = Instance.new("TextLabel", frame)
-    lbl.Size = UDim2.new(1, -20, 0, 15)
-    lbl.Position = UDim2.new(0, 10, 0, 5)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = text .. ": " .. default
-    lbl.TextColor3 = Theme.Text
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextSize = 11
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-
-    local bg = Instance.new("Frame", frame)
+local function MakeSlider(parent, text, y, min, max, def, cb)
+    local f = Instance.new("Frame", parent)
+    f.Size = UDim2.new(1, -20, 0, 45)
+    f.Position = UDim2.new(0, 5, 0, y)
+    f.BackgroundColor3 = Theme.PanelBg
+    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
+    local l = Instance.new("TextLabel", f)
+    l.Size = UDim2.new(1, -20, 0, 15)
+    l.Position = UDim2.new(0, 10, 0, 5)
+    l.BackgroundTransparency = 1
+    l.Text = text .. ": " .. def
+    l.TextColor3 = Theme.Text
+    l.Font = Enum.Font.Gotham
+    l.TextSize = 11
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    local bg = Instance.new("Frame", f)
     bg.Size = UDim2.new(1, -20, 0, 6)
     bg.Position = UDim2.new(0, 10, 0, 28)
     bg.BackgroundColor3 = Theme.ToggleOff
     Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
-
     local fill = Instance.new("Frame", bg)
-    fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    fill.Size = UDim2.new((def - min) / (max - min), 0, 1, 0)
     fill.BackgroundColor3 = Theme.Accent
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
-
     local knob = Instance.new("Frame", bg)
     knob.Size = UDim2.new(0, 12, 0, 12)
-    knob.Position = UDim2.new((default - min) / (max - min), -6, 0.5, -6)
+    knob.Position = UDim2.new((def - min) / (max - min), -6, 0.5, -6)
     knob.BackgroundColor3 = Theme.Text
     Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
-
-    local dragging = false
-    local function update(input)
-        local pos = math.clamp((input.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
-        fill.Size = UDim2.new(pos, 0, 1, 0)
-        knob.Position = UDim2.new(pos, -6, 0.5, -6)
-        local val = math.floor(min + (pos * (max - min)))
-        lbl.Text = text .. ": " .. val
-        callback(val)
+    local dr = false
+    local function upd(input)
+        local p = math.clamp((input.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
+        fill.Size = UDim2.new(p, 0, 1, 0)
+        knob.Position = UDim2.new(p, -6, 0.5, -6)
+        local v = math.floor(min + (p * (max - min)))
+        l.Text = text .. ": " .. v
+        cb(v)
     end
-
     bg.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true; update(input)
-        end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dr = true; upd(input) end
     end)
     UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            update(input)
-        end
+        if dr and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then upd(input) end
     end)
     UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dr = false end
     end)
 end
 
--- Populate Pages
-local Home = Pages["Home"]
-createSection(Home, "Welcome!", 0)
-local welcomeDesc = Instance.new("TextLabel", Home)
-welcomeDesc.Size = UDim2.new(1, -10, 0, 30)
-welcomeDesc.Position = UDim2.new(0, 5, 0, 40)
-welcomeDesc.BackgroundTransparency = 1
-welcomeDesc.Text = "Enjoy your time in Blox Fruits! 👑"
-welcomeDesc.TextColor3 = Theme.SubText
-welcomeDesc.Font = Enum.Font.Gotham
-welcomeDesc.TextSize = 11
-welcomeDesc.TextXAlignment = Enum.TextXAlignment.Left
-
-local Farm = Pages["Farming"]
-createSection(Farm, "Farming", 0)
-createToggle(Farm, "Auto Farm", 40, false, function(s) States.AutoFarm = s end)
-createDropdown(Farm, "Select Method", {"Enemies", "Players"}, 80, function(opt) print("Method:", opt) end)
-createSlider(Farm, "Farm Range", 120, 10, 150, 30, function(v) Config.FarmRange = v end)
-
-local Combat = Pages["Combat"]
-createSection(Combat, "Combat", 0)
-createToggle(Combat, "Fast Attack", 40, false, function(s) States.FastAttack = s end)
-createSlider(Combat, "Attack Speed (x100)", 80, 1, 50, 10, function(v) Config.AttackSpeed = v / 100 end)
-
-local Teleport = Pages["Teleport"]
-createSection(Teleport, "Teleport", 0)
-createButton(Teleport, "Teleport to Cursed Ship", 40, function() print("TP Cursed Ship") end)
-createButton(Teleport, "Teleport to Castle", 80, function() print("TP Castle") end)
-createButton(Teleport, "Teleport to Main Island", 120, function() print("TP Main") end)
-
-local Shop = Pages["Shop"]
-createSection(Shop, "Shop", 0)
-createToggle(Shop, "Auto Buy Haki", 40, false, function(s) print("Auto Haki:", s) end)
-createToggle(Shop, "Auto Buy Sword", 80, false, function(s) print("Auto Sword:", s) end)
-
-local Misc = Pages["Misc"]
-createSection(Misc, "Misc", 0)
-createToggle(Misc, "Fullbright", 40, false, function(s) 
-    if s then
-        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-        Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-        Lighting.Brightness = 2
-    else
-        Lighting.Ambient = Color3.fromRGB(70, 70, 70)
-        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
-        Lighting.Brightness = 1
-    end
-end)
-
-local ConfigPage = Pages["Config"]
-createSection(ConfigPage, "UI Config", 0)
-createButton(ConfigPage, "Change Accent Color", 40, function()
-    currentColorIndex = currentColorIndex + 1
-    if currentColorIndex > #ColorList then currentColorIndex = 1 end
-    local newColor = ColorList[currentColorIndex].Color
-    Stroke.Color = newColor
-    Crown.TextColor3 = newColor
-    SubTitle.TextColor3 = newColor
-    CloseBtn.TextColor3 = newColor
-    openStroke.Color = newColor
-    OpenBtn.BackgroundColor3 = newColor
-    for _, b in pairs(TabButtons) do
-        if b.BackgroundTransparency == 0 then b:GetChildren()[2].TextColor3 = newColor end
-        b:GetChildren()[1].TextColor3 = newColor
-    end
-end)
-createButton(ConfigPage, "Change Font Style", 80, function()
-    currentFontIndex = currentFontIndex + 1
-    if currentFontIndex > #FontList then currentFontIndex = 1 end
-    local newFont = FontList[currentFontIndex]
-    Title.Font = newFont
-    SubTitle.Font = newFont
-    welcomeDesc.Font = newFont
-    for _, p in pairs(Pages) do
-        for _, obj in pairs(p:GetDescendants()) do
-            if obj:IsA("TextLabel") or obj:IsA("TextButton") then obj.Font = newFont end
-        end
-    end
-end)
-createToggle(ConfigPage, "Anti-AFK", 120, false, function(s) States.AntiAFK = s end)
-
-for _, page in pairs(Pages) do
-    page.CanvasSize = UDim2.new(0, 0, 0, #page:GetChildren() * 45 + 50)
+local function MakeBtn(parent, text, y, cb)
+    local b = Instance.new("TextButton", parent)
+    b.Size = UDim2.new(1, -20, 0, 30)
+    b.Position = UDim2.new(0, 5, 0, y)
+    b.BackgroundColor3 = Theme.PanelBg
+    b.Text = text
+    b.TextColor3 = Theme.Text
+    b.Font = Enum.Font.Gotham
+    b.TextSize = 12
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+    b.MouseButton1Click:Connect(cb)
 end
 
-TabButtons[1].BackgroundTransparency = 0
-TabButtons[1].BackgroundColor3 = Theme.PanelBg
-TabButtons[1]:GetChildren()[2].TextColor3 = Theme.Accent
+MakeToggle(Pages["Farming"], "Auto Farm", 40, false, function(s) States.AutoFarm = s end)
+MakeSlider(Pages["Farming"], "Farm Range", 80, 10, 150, 30, function(v) Config.FarmRange = v end)
+MakeToggle(Pages["Combat"], "Fast Attack", 40, false, function(s) States.FastAttack = s end)
+MakeSlider(Pages["Combat"], "Attack Speed (x100)", 80, 1, 50, 10, function(v) Config.AttackSpeed = v / 100 end)
+MakeBtn(Pages["Teleport"], "TP Cursed Ship", 40, function() print("TP") end)
+MakeBtn(Pages["Teleport"], "TP Castle", 80, function() print("TP") end)
+MakeToggle(Pages["Misc"], "Fullbright", 40, false, function(s) 
+    if s then Lighting.Ambient = Color3.fromRGB(255,255,255); Lighting.OutdoorAmbient = Color3.fromRGB(255,255,255); Lighting.Brightness = 2
+    else Lighting.Ambient = Color3.fromRGB(70,70,70); Lighting.OutdoorAmbient = Color3.fromRGB(128,128,128); Lighting.Brightness = 1 end
+end)
+MakeBtn(Pages["Config"], "Change Color", 40, function()
+    cIdx = cIdx + 1; if cIdx > #ColorList then cIdx = 1 end
+    Stroke.Color = ColorList[cIdx]; Crown.TextColor3 = ColorList[cIdx]; SubTitle.TextColor3 = ColorList[cIdx]
+end)
+MakeBtn(Pages["Config"], "Change Font", 80, function()
+    fIdx = fIdx + 1; if fIdx > #FontList then fIdx = 1 end
+    for _, p in pairs(Pages) do for _, o in pairs(p:GetDescendants()) do if o:IsA("TextLabel") or o:IsA("TextButton") then o.Font = FontList[fIdx] end end end
+end)
+MakeToggle(Pages["Config"], "Anti-AFK", 120, false, function(s) States.AntiAFK = s end)
+
+for _, p in pairs(Pages) do p.CanvasSize = UDim2.new(0, 0, 0, #p:GetChildren() * 45 + 50) end
+TabBtns[1].BackgroundTransparency = 0
+TabBtns[1].BackgroundColor3 = Theme.PanelBg
+TabBtns[1]:GetChildren()[2].TextColor3 = Theme.Accent
 Pages["Home"].Visible = true
--- NOVAHUB: Part 3 (Logic Engine)
 
--- Anti-AFK Loop
-LocalPlayer.Idled:Connect(function()
-    if States.AntiAFK then
-        VirtualUser:CaptureController()
-        VirtualUser:ClickButton2(Vector2.new())
-    end
-end)
+LP.Idled:Connect(function() if States.AntiAFK then VirtualUser:CaptureController(); VirtualUser:ClickButton2(Vector2.new()) end end)
 
--- Combat Remote Function
-local function doMeleeAttack()
-    local combatRemote = ReplicatedStorage:FindFirstChild("Combat")
-    if combatRemote and combatRemote:FindFirstChild("RemoteEvent") then
-        combatRemote.RemoteEvent:FireServer("Button1", true)
-    else
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChildOfClass("Tool") then
-            char:FindFirstChildOfClass("Tool"):Activate()
-        end
-    end
+local function attack()
+    local cR = ReplicatedStorage:FindFirstChild("Combat")
+    if cR and cR:FindFirstChild("RemoteEvent") then cR.RemoteEvent:FireServer("Button1", true)
+    else local ch = LP.Character; if ch and ch:FindFirstChildOfClass("Tool") then ch:FindFirstChildOfClass("Tool"):Activate() end end
 end
 
--- Fast Attack Loop
-RunService.Heartbeat:Connect(function()
-    if States.FastAttack then
-        doMeleeAttack()
-        task.wait(Config.AttackSpeed)
-    end
-end)
+RunService.Heartbeat:Connect(function() if States.FastAttack then attack(); task.wait(Config.AttackSpeed) end end)
 
--- Auto Farm Loop
 RunService.Heartbeat:Connect(function()
     if not States.AutoFarm then return end
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-
-    local closestEnemy = nil
-    local shortestDist = math.huge
-    local enemies = workspace:FindFirstChild("Enemies")
-
-    if enemies then
-        for _, v in pairs(enemies:GetChildren()) do
+    local ch = LP.Character
+    if not ch or not ch:FindFirstChild("HumanoidRootPart") then return end
+    local closest, shortest = nil, math.huge
+    local en = workspace:FindFirstChild("Enemies")
+    if en then
+        for _, v in pairs(en:GetChildren()) do
             if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
-                local dist = (char.HumanoidRootPart.Position - v.HumanoidRootPart.Position).Magnitude
-                if dist < shortestDist and dist <= Config.FarmRange then
-                    shortestDist = dist
-                    closestEnemy = v
-                end
+                local d = (ch.HumanoidRootPart.Position - v.HumanoidRootPart.Position).Magnitude
+                if d < shortest and d <= Config.FarmRange then shortest = d; closest = v end
             end
         end
     end
-
-    if closestEnemy then
-        if shortestDist > 5 then
-            char.HumanoidRootPart.CFrame = closestEnemy.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
-        end
-        doMeleeAttack()
+    if closest then
+        if shortest > 5 then ch.HumanoidRootPart.CFrame = closest.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3) end
+        attack()
     end
-end))
+end)
 
-print("NOVAHUB Fully Loaded.")
+print("NOVAHUB Loaded.")
