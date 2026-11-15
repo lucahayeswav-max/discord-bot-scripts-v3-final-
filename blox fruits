@@ -1,508 +1,354 @@
--- NOVAHUB V3
--- Fly method for teleporting
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local VirtualUser = game:GetService("VirtualUser")
-local Lighting = game:GetService("Lighting")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local CoreGui = game:GetService("CoreGui")
+local Players=game:GetService("Players")
+local RunService=game:GetService("RunService")
+local UserInputService=game:GetService("UserInputService")
+local TweenService=game:GetService("TweenService")
+local CoreGui=game:GetService("CoreGui")
+local VirtualUser=game:GetService("VirtualUser")
+local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local LP=Players.LocalPlayer
 
-local player = Players.LocalPlayer
+if CoreGui:FindFirstChild("NOVAHUB") then CoreGui.NOVAHUB:Destroy() end
+local States={AutoFarm=false,AutoSpawn=false,AutoBounty=false,AutoSword=false,AutoGun=false}
+local Config={FarmRange=30,SelectedMethod="Level"}
 
--- State & Config
-local States = { AutoFarm = false, AutoQuests = false, AntiAFK = false }
-local Config = { FarmRange = 30 }
-local QuestNPCs = {
-    ["Sword Dealer"]=1,["Military Soldier"]=2,["Magician"]=3,["Hokage"]=4,["Blacksmith"]=5,["Fishman"]=6
-}
-local Locations = {
-    ["First Sea"] = {
-        ["Starter Island"] = CFrame.new(1059, 16, 1547),
-        ["Marine Fortress"] = CFrame.new(-4888, 71, 4254),
-        ["Jungle"] = CFrame.new(-1250, 25, 340),
-        ["Buggy Island"] = CFrame.new(-1150, 25, 3800),
-        ["Sky Island"] = CFrame.new(-4600, 800, -1000),
-        ["Pirate Village"] = CFrame.new(-1100, 20, 4300)
-    },
-    ["Second Sea"] = {
-        ["Kingdom of Rose"] = CFrame.new(-623, 17, 3965),
-        ["Green Zone"] = CFrame.new(-200, 20, 3500),
-        ["Snow Island"] = CFrame.new(1100, 40, 4200),
-        ["Cursed Ship"] = CFrame.new(915, 125, 32700),
-        ["Ice Castle"] = CFrame.new(-5000, 40, 4000),
-        ["Forgotten Island"] = CFrame.new(-3000, 30, 2000)
-    },
-    ["Third Sea"] = {
-        ["Port Town"] = CFrame.new(-280, 22, 1168),
-        ["Great Tree"] = CFrame.new(1750, 100, 1000),
-        ["Hydra Island"] = CFrame.new(5000, 30, 1000),
-        ["Castle on the Sea"] = CFrame.new(-5000, 50, -1000),
-        ["Haunted Castle"] = CFrame.new(-9000, 100, 5000),
-        ["Peanut Island"] = CFrame.new(2000, 20, -2000)
-    }
-}
+local Theme={Bg=Color3.fromRGB(24,24,27),SidebarBg=Color3.fromRGB(18,18,20),PanelBg=Color3.fromRGB(33,33,36),Accent=Color3.fromRGB(138,43,226),Text=Color3.fromRGB(240,240,240),SubText=Color3.fromRGB(170,170,170),ToggleOff=Color3.fromRGB(75,75,80)}
 
--- Cleanup
-local old = CoreGui:FindFirstChild("NOVAHUB")
-if old then old:Destroy() end
+local SG=Instance.new("ScreenGui",CoreGui)
+SG.Name="NOVAHUB"
+SG.ResetOnSpawn=false
+local Main=Instance.new("Frame",SG)
+Main.Size=UDim2.new(0,500,0,300)
+Main.Position=UDim2.new(0.5,-250,0.5,-150)
+Main.BackgroundColor3=Theme.Bg
+Main.BorderSizePixel=0
+Main.Active=true
+Instance.new("UICorner",Main).CornerRadius=UDim.new(0,8)
+local Stroke=Instance.new("UIStroke",Main)
+Stroke.Color=Theme.Accent
+Stroke.Thickness=1.5
 
-local Theme = {
-    Background = Color3.fromRGB(15, 15, 20),
-    Sidebar = Color3.fromRGB(20, 20, 27),
-    Panel = Color3.fromRGB(27, 27, 36),
-    Accent = Color3.fromRGB(145, 75, 255),
-    Text = Color3.fromRGB(245, 245, 250),
-    Muted = Color3.fromRGB(155, 155, 170),
-    Off = Color3.fromRGB(65, 65, 78)
-}
-
-local gui = Instance.new("ScreenGui")
-gui.Name = "NOVAHUB"
-gui.ResetOnSpawn = false
-gui.Parent = CoreGui
-
-local function corner(object, radius)
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, radius or 8)
-    c.Parent = object
-end
-
-local function stroke(object, color, thickness)
-    local s = Instance.new("UIStroke")
-    s.Color = color or Theme.Accent
-    s.Thickness = thickness or 1
-    s.Transparency = 0.25
-    s.Parent = object
-end
-
-local function make(class, parent, properties)
-    local object = Instance.new(class)
-    for property, value in pairs(properties) do
-        object[property] = value
-    end
-    object.Parent = parent
-    return object
-end
-
--- Main window
-local main = make("Frame", gui, {
-    Name = "Main",
-    Size = UDim2.fromOffset(760, 470),
-    Position = UDim2.new(0.5, -380, 0.5, -235),
-    BackgroundColor3 = Theme.Background,
-    BorderSizePixel = 0
-})
-corner(main, 14)
-stroke(main, Theme.Accent, 1.5)
-
--- Top bar
-local top = make("Frame", main, {
-    Size = UDim2.new(1, 0, 0, 58),
-    BackgroundColor3 = Theme.Sidebar,
-    BorderSizePixel = 0
-})
-corner(top, 14)
-
-make("TextLabel", top, {
-    Position = UDim2.fromOffset(20, 8),
-    Size = UDim2.fromOffset(190, 25),
-    BackgroundTransparency = 1,
-    Text = "👑 NOVAHUB",
-    TextColor3 = Theme.Text,
-    Font = Enum.Font.GothamBold,
-    TextSize = 20,
-    TextXAlignment = Enum.TextXAlignment.Left
-})
-
-make("TextLabel", top, {
-    Position = UDim2.fromOffset(21, 32),
-    Size = UDim2.fromOffset(200, 16),
-    BackgroundTransparency = 1,
-    Text = "PREMIUM INTERFACE",
-    TextColor3 = Theme.Accent,
-    Font = Enum.Font.GothamBold,
-    TextSize = 9,
-    TextXAlignment = Enum.TextXAlignment.Left
-})
-
-local close = make("TextButton", top, {
-    Size = UDim2.fromOffset(35, 35),
-    Position = UDim2.new(1, -48, 0, 11),
-    BackgroundColor3 = Theme.Panel,
-    Text = "×",
-    TextColor3 = Theme.Text,
-    Font = Enum.Font.GothamBold,
-    TextSize = 22,
-    AutoButtonColor = false
-})
-corner(close, 8)
-
-close.MouseButton1Click:Connect(function()
-    gui.Enabled = false
-end)
-
--- Sidebar
-local sidebar = make("Frame", main, {
-    Position = UDim2.fromOffset(0, 58),
-    Size = UDim2.new(0, 175, 1, -58),
-    BackgroundColor3 = Theme.Sidebar,
-    BorderSizePixel = 0
-})
-
-local content = make("Frame", main, {
-    Position = UDim2.fromOffset(190, 72),
-    Size = UDim2.new(1, -205, 1, -88),
-    BackgroundTransparency = 1
-})
-
-local tabs = {
-    {"Home", "⌂"},
-    {"Farming", "⚒"},
-    {"Teleport", "➤"},
-    {"Settings", "⚙"}
-}
-
-local pages = {}
-local tabButtons = {}
-local statusText
-
-local function showPage(name)
-    for pageName, page in pairs(pages) do
-        page.Visible = pageName == name
-    end
-
-    for tabName, button in pairs(tabButtons) do
-        local selected = tabName == name
-        button.BackgroundColor3 = selected and Theme.Panel or Theme.Sidebar
-        button.TextColor3 = selected and Theme.Accent or Theme.Muted
-    end
-end
-
--- Create pages
-for _, tab in ipairs(tabs) do
-    local name = tab[1]
-
-    local page = make("ScrollingFrame", content, {
-        Name = name,
-        Size = UDim2.fromScale(1, 1),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ScrollBarThickness = 3,
-        ScrollBarImageColor3 = Theme.Accent,
-        CanvasSize = UDim2.new(0, 0, 0, 0),
-        Visible = false
-    })
-
-    local layout = make("UIListLayout", page, {
-        Padding = UDim.new(0, 10),
-        SortOrder = Enum.SortOrder.LayoutOrder
-    })
-
-    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        page.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 15)
-    end)
-
-    pages[name] = page
-
-    local button = make("TextButton", sidebar, {
-        Name = name .. "Tab",
-        Position = UDim2.fromOffset(10, 12 + (#tabButtons * 43)),
-        Size = UDim2.new(1, -20, 0, 36),
-        BackgroundColor3 = Theme.Sidebar,
-        Text = tab[2] .. "    " .. name,
-        TextColor3 = Theme.Muted,
-        Font = Enum.Font.GothamSemibold,
-        TextSize = 12,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        AutoButtonColor = false
-    })
-    corner(button, 7)
-
-    button.MouseButton1Click:Connect(function()
-        showPage(name)
-    end)
-
-    tabButtons[name] = button
-end
-
--- UI components
-local function section(parent, title)
-    local label = make("TextLabel", parent, {
-        Size = UDim2.new(1, -8, 0, 30),
-        BackgroundTransparency = 1,
-        Text = "  " .. title:upper(),
-        TextColor3 = Theme.Accent,
-        Font = Enum.Font.GothamBold,
-        TextSize = 12,
-        TextXAlignment = Enum.TextXAlignment.Left
-    })
-    return label
-end
-
-local function infoCard(parent, title, description)
-    local card = make("Frame", parent, {
-        Size = UDim2.new(1, -8, 0, 85),
-        BackgroundColor3 = Theme.Panel,
-        BorderSizePixel = 0
-    })
-    corner(card, 9)
-
-    make("TextLabel", card, {
-        Position = UDim2.fromOffset(14, 10),
-        Size = UDim2.new(1, -25, 0, 22),
-        BackgroundTransparency = 1,
-        Text = title,
-        TextColor3 = Theme.Text,
-        Font = Enum.Font.GothamBold,
-        TextSize = 14,
-        TextXAlignment = Enum.TextXAlignment.Left
-    })
-
-    make("TextLabel", card, {
-        Position = UDim2.fromOffset(14, 36),
-        Size = UDim2.new(1, -25, 0, 35),
-        BackgroundTransparency = 1,
-        Text = description,
-        TextColor3 = Theme.Muted,
-        Font = Enum.Font.Gotham,
-        TextSize = 11,
-        TextWrapped = true,
-        TextXAlignment = Enum.TextXAlignment.Left
-    })
-end
-
-local function actionButton(parent, title, callback)
-    local button = make("TextButton", parent, {
-        Size = UDim2.new(1, -8, 0, 40),
-        BackgroundColor3 = Theme.Panel,
-        Text = "   " .. title,
-        TextColor3 = Theme.Text,
-        Font = Enum.Font.GothamSemibold,
-        TextSize = 12,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        AutoButtonColor = false
-    })
-    corner(button, 8)
-
-    button.MouseEnter:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.15), { BackgroundColor3 = Theme.Accent }):Play()
-    end)
-
-    button.MouseLeave:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.15), { BackgroundColor3 = Theme.Panel }):Play()
-    end)
-
-    button.MouseButton1Click:Connect(callback)
-    return button
-end
-
-local function toggle(parent, title, default, callback)
-    local row = make("Frame", parent, {
-        Size = UDim2.new(1, -8, 0, 42),
-        BackgroundColor3 = Theme.Panel,
-        BorderSizePixel = 0
-    })
-    corner(row, 8)
-
-    make("TextLabel", row, {
-        Position = UDim2.fromOffset(12, 0),
-        Size = UDim2.new(1, -65, 1, 0),
-        BackgroundTransparency = 1,
-        Text = title,
-        TextColor3 = Theme.Text,
-        Font = Enum.Font.Gotham,
-        TextSize = 12,
-        TextXAlignment = Enum.TextXAlignment.Left
-    })
-
-    local enabled = default == true
-
-    local switch = make("TextButton", row, {
-        Position = UDim2.new(1, -48, 0.5, -10),
-        Size = UDim2.fromOffset(36, 20),
-        BackgroundColor3 = enabled and Theme.Accent or Theme.Off,
-        Text = "",
-        AutoButtonColor = false
-    })
-    corner(switch, 20)
-
-    local dot = make("Frame", switch, {
-        Position = enabled and UDim2.new(1, -18, 0, 2) or UDim2.fromOffset(2, 2),
-        Size = UDim2.fromOffset(16, 16),
-        BackgroundColor3 = Color3.new(1, 1, 1)
-    })
-    corner(dot, 20)
-
-    switch.MouseButton1Click:Connect(function()
-        enabled = not enabled
-        TweenService:Create(switch, TweenInfo.new(0.15), { BackgroundColor3 = enabled and Theme.Accent or Theme.Off }):Play()
-        TweenService:Create(dot, TweenInfo.new(0.15), { Position = enabled and UDim2.new(1, -18, 0, 2) or UDim2.fromOffset(2, 2) }):Play()
-        callback(enabled)
-    end)
-end
-
-local function setStatus(message)
-    if statusText then
-        statusText.Text = "STATUS: " .. message
-    end
-end
-
--- Fly Teleport (Bypasses Anti-Cheat)
-local function FlyTo(TargetCF)
-    local ch = player.Character
-    if not ch or not ch:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = ch.HumanoidRootPart
-    
-    -- We create a BodyVelocity to smoothly glide the player
-    local bv = Instance.new("BodyVelocity")
-    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bv.Parent = hrp
-    
-    local startPos = hrp.Position
-    local endPos = TargetCF.Position
-    local distance = (endPos - startPos).Magnitude
-    local speed = distance / 0.8 -- 0.8 seconds to reach destination
-    
-    bv.Velocity = (endPos - startPos).Unit * speed
-    
-    task.wait(0.8)
-    
-    if bv then bv:Destroy() end
-    hrp.CFrame = TargetCF
-end
-
--- HOME
-section(pages.Home, "Dashboard")
-infoCard(pages.Home, "Welcome to NOVAHUB", "Your personal control center. Select a category from the sidebar.")
-infoCard(pages.Home, "User", player.DisplayName .. "  (@" .. player.Name .. ")")
-infoCard(pages.Home, "GitHub", "lucahayeswav-max")
-infoCard(pages.Home, "Made with AI", "Version 3.0")
-statusText = make("TextLabel", pages.Home, {
-    Size = UDim2.new(1, -8, 0, 30),
-    BackgroundTransparency = 1,
-    Text = "STATUS: Ready",
-    TextColor3 = Theme.Accent,
-    Font = Enum.Font.GothamBold,
-    TextSize = 11,
-    TextXAlignment = Enum.TextXAlignment.Left
-})
-actionButton(pages.Home, "Unlock Mouse", function()
-    UserInputService.MouseIconEnabled = true
-    setStatus("Mouse Unlocked")
-end)
-
--- FARMING
-section(pages.Farming, "Farming tools")
-toggle(pages.Farming, "Auto Farm (TP to Enemy)", false, function(v) States.AutoFarm = v end)
-toggle(pages.Farming, "Auto Accept Quests", false, function(v) States.AutoQuests = v end)
-infoCard(pages.Farming, "Farming Info", "Use your third-party auto clicker while Auto Farm is ON.")
-actionButton(pages.Farming, "Set Farm Range to 30", function() Config.FarmRange = 30; setStatus("Range: 30") end)
-actionButton(pages.Farming, "Set Farm Range to 50", function() Config.FarmRange = 50; setStatus("Range: 50") end)
-
--- TELEPORT (Using Fly Method)
-section(pages.Teleport, "First Sea")
-for name, cf in pairs(Locations["First Sea"]) do
-    actionButton(pages.Teleport, name, function() FlyTo(cf) end)
-end
-
-section(pages.Teleport, "Second Sea")
-for name, cf in pairs(Locations["Second Sea"]) do
-    actionButton(pages.Teleport, name, function() FlyTo(cf) end)
-end
-
-section(pages.Teleport, "Third Sea")
-for name, cf in pairs(Locations["Third Sea"]) do
-    actionButton(pages.Teleport, name, function() FlyTo(cf) end)
-end
-
--- SETTINGS
-section(pages.Settings, "Preferences")
-toggle(pages.Settings, "Fullbright", false, function(v)
-    if v then Lighting.Ambient = Color3.fromRGB(255,255,255); Lighting.OutdoorAmbient = Color3.fromRGB(255,255,255); Lighting.Brightness = 2
-    else Lighting.Ambient = Color3.fromRGB(70,70,70); Lighting.OutdoorAmbient = Color3.fromRGB(128,128,128); Lighting.Brightness = 1 end
-end)
-toggle(pages.Settings, "Anti-AFK", false, function(v) States.AntiAFK = v end)
-
-showPage("Home")
-
--- Drag window
-local dragging = false
-local dragStart
-local startPosition
-
-top.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPosition = main.Position
+local drag,dragIn,dragStart,startPos
+Main.InputBegan:Connect(function(input)
+    if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
+        drag=true;dragStart=input.Position;startPos=Main.Position
+        input.Changed:Connect(function() if input.UserInputState==Enum.UserInputState.End then drag=false end end)
     end
 end)
-
+Main.InputChanged:Connect(function(input)
+    if input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch then dragIn=input end
+end)
 UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        main.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
+    if input==dragIn and drag then
+        local delta=input.Position-dragStart
+        Main.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+delta.X,startPos.Y.Scale,startPos.Y.Offset+delta.Y)
     end
 end)
 
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
+local TopBar=Instance.new("Frame",Main)
+TopBar.Size=UDim2.new(1,0,0,50)
+TopBar.BackgroundTransparency=1
+local Title=Instance.new("TextLabel",TopBar)
+Title.Size=UDim2.new(1,-80,0,25)
+Title.Position=UDim2.new(0,50,0,10)
+Title.BackgroundTransparency=1
+Title.Text="Blox Fruits"
+Title.TextColor3=Theme.Text
+Title.Font=Enum.Font.GothamBold
+Title.TextSize=16
+Title.TextXAlignment=Enum.TextXAlignment.Left
+local SubTitle=Instance.new("TextLabel",TopBar)
+SubTitle.Size=UDim2.new(1,-80,0,15)
+SubTitle.Position=UDim2.new(0,50,0,30)
+SubTitle.BackgroundTransparency=1
+SubTitle.Text="Script Hub"
+SubTitle.TextColor3=Theme.Accent
+SubTitle.Font=Enum.Font.GothamSemibold
+SubTitle.TextSize=11
+SubTitle.TextXAlignment=Enum.TextXAlignment.Left
+local CloseBtn=Instance.new("TextButton",TopBar)
+CloseBtn.Size=UDim2.new(0,30,0,30)
+CloseBtn.Position=UDim2.new(1,-40,0,10)
+CloseBtn.BackgroundTransparency=1
+CloseBtn.Text="✕"
+CloseBtn.TextColor3=Theme.Accent
+CloseBtn.Font=Enum.Font.GothamBold
+CloseBtn.TextSize=16
+CloseBtn.MouseButton1Click:Connect(function() SG:Destroy() end)
+
+local Sidebar=Instance.new("Frame",Main)
+Sidebar.Size=UDim2.new(0,140,1,-50)
+Sidebar.Position=UDim2.new(0,0,0,50)
+Sidebar.BackgroundColor3=Theme.SidebarBg
+Sidebar.BorderSizePixel=0
+local Content=Instance.new("Frame",Main)
+Content.Size=UDim2.new(1,-140,1,-50)
+Content.Position=UDim2.new(0,140,0,50)
+Content.BackgroundTransparency=1
+
+local Tabs={"Home","Farming","Combat","Teleport","Shop","Misc","Settings"}
+local TabBtns={}
+local Pages={}
+
+for i,name in ipairs(Tabs) do
+    local btn=Instance.new("TextButton",Sidebar)
+    btn.Size=UDim2.new(1,-20,0,35)
+    btn.Position=UDim2.new(0,10,0,(i-1)*38+10)
+    btn.BackgroundTransparency=1
+    btn.Text="   "..name
+    btn.TextColor3=Theme.SubText
+    btn.Font=Enum.Font.GothamSemibold
+    btn.TextSize=12
+    btn.TextXAlignment=Enum.TextXAlignment.Left
+    Instance.new("UICorner",btn).CornerRadius=UDim.new(0,6)
+    
+    local page=Instance.new("ScrollingFrame",Content)
+    page.Size=UDim2.new(1,-20,1,-10)
+    page.Position=UDim2.new(0,10,0,5)
+    page.BackgroundTransparency=1
+    page.ScrollBarThickness=2
+    page.ScrollBarImageColor3=Theme.Accent
+    page.Visible=false
+    
+    table.insert(TabBtns,btn)
+    Pages[name]=page
+    
+    btn.MouseButton1Click:Connect(function()
+        for _,b in ipairs(TabBtns) do b.BackgroundTransparency=1;b.TextColor3=Theme.SubText end
+        for _,p in pairs(Pages) do p.Visible=false end
+        btn.BackgroundTransparency=0
+        btn.BackgroundColor3=Theme.PanelBg
+        btn.TextColor3=Theme.Accent
+        page.Visible=true
+    end)
+end
+
+local function MakeSection(parent,title,y)
+    local f=Instance.new("Frame",parent)
+    f.Size=UDim2.new(1,-10,0,35)
+    f.Position=UDim2.new(0,5,0,y)
+    f.BackgroundColor3=Theme.PanelBg
+    Instance.new("UICorner",f).CornerRadius=UDim.new(0,4)
+    local acc=Instance.new("Frame",f)
+    acc.Size=UDim2.new(0,3,0,15)
+    acc.Position=UDim2.new(0,10,0.5,-7.5)
+    acc.BackgroundColor3=Theme.Accent
+    Instance.new("UICorner",acc).CornerRadius=UDim.new(1,0)
+    local l=Instance.new("TextLabel",f)
+    l.Size=UDim2.new(1,-30,1,0)
+    l.Position=UDim2.new(0,20,0,0)
+    l.BackgroundTransparency=1
+    l.Text=title
+    l.TextColor3=Theme.Text
+    l.Font=Enum.Font.GothamBold
+    l.TextSize=13
+    l.TextXAlignment=Enum.TextXAlignment.Left
+    return f
+end
+
+local function MakeToggle(parent,text,y,def,cb)
+    local f=Instance.new("Frame",parent)
+    f.Size=UDim2.new(1,-10,0,35)
+    f.Position=UDim2.new(0,5,0,y)
+    f.BackgroundColor3=Theme.PanelBg
+    Instance.new("UICorner",f).CornerRadius=UDim.new(0,4)
+    local l=Instance.new("TextLabel",f)
+    l.Size=UDim2.new(1,-60,1,0)
+    l.Position=UDim2.new(0,10,0,0)
+    l.BackgroundTransparency=1
+    l.Text=text
+    l.TextColor3=Theme.Text
+    l.Font=Enum.Font.Gotham
+    l.TextSize=12
+    l.TextXAlignment=Enum.TextXAlignment.Left
+    local s=Instance.new("TextButton",f)
+    s.Size=UDim2.new(0,30,0,16)
+    s.Position=UDim2.new(1,-40,0.5,-8)
+    s.BackgroundColor3=def and Theme.Accent or Theme.ToggleOff
+    s.Text=""
+    s.AutoButtonColor=false
+    Instance.new("UICorner",s).CornerRadius=UDim.new(1,0)
+    local c=Instance.new("Frame",s)
+    c.Size=UDim2.new(0,12,0,12)
+    c.Position=def and UDim2.new(1,-14,0.5,-6) or UDim2.new(0,2,0.5,-6)
+    c.BackgroundColor3=Theme.Text
+    Instance.new("UICorner",c).CornerRadius=UDim.new(1,0)
+    local st=def
+    s.MouseButton1Click:Connect(function()
+        st=not st
+        TweenService:Create(s,TweenInfo.new(0.15),{BackgroundColor3=st and Theme.Accent or Theme.ToggleOff}):Play()
+        TweenService:Create(c,TweenInfo.new(0.15),{Position=st and UDim2.new(1,-14,0.5,-6) or UDim2.new(0,2,0.5,-6)}):Play()
+        cb(st)
+    end)
+end
+
+local function MakeDropdown(parent,text,options,y,cb)
+    local f=Instance.new("Frame",parent)
+    f.Size=UDim2.new(1,-10,0,35)
+    f.Position=UDim2.new(0,5,0,y)
+    f.BackgroundColor3=Theme.PanelBg
+    Instance.new("UICorner",f).CornerRadius=UDim.new(0,4)
+    local l=Instance.new("TextLabel",f)
+    l.Size=UDim2.new(1,-120,1,0)
+    l.Position=UDim2.new(0,10,0,0)
+    l.BackgroundTransparency=1
+    l.Text=text
+    l.TextColor3=Theme.Text
+    l.Font=Enum.Font.Gotham
+    l.TextSize=12
+    l.TextXAlignment=Enum.TextXAlignment.Left
+    local btn=Instance.new("TextButton",f)
+    btn.Size=UDim2.new(0,90,0,24)
+    btn.Position=UDim2.new(1,-100,0.5,-12)
+    btn.BackgroundColor3=Theme.SidebarBg
+    btn.Text=options[1]
+    btn.TextColor3=Theme.Text
+    btn.Font=Enum.Font.Gotham
+    btn.TextSize=11
+    Instance.new("UICorner",btn).CornerRadius=UDim.new(0,4)
+    
+    local open=false
+    local menu=Instance.new("Frame",f)
+    menu.Size=UDim2.new(0,90,0,#options*24)
+    menu.Position=UDim2.new(1,-100,1,0)
+    menu.BackgroundColor3=Theme.SidebarBg
+    menu.Visible=false
+    menu.ZIndex=10
+    Instance.new("UICorner",menu).CornerRadius=UDim.new(0,4)
+    
+    for i,opt in ipairs(options) do
+        local optBtn=Instance.new("TextButton",menu)
+        optBtn.Size=UDim2.new(1,0,0,24)
+        optBtn.Position=UDim2.new(0,0,0,(i-1)*24)
+        optBtn.BackgroundTransparency=1
+        optBtn.Text=opt
+        optBtn.TextColor3=Theme.SubText
+        optBtn.Font=Enum.Font.Gotham
+        optBtn.TextSize=11
+        optBtn.ZIndex=11
+        optBtn.MouseButton1Click:Connect(function()
+            btn.Text=opt
+            menu.Visible=false
+            open=false
+            cb(opt)
+        end)
     end
+    btn.MouseButton1Click:Connect(function()
+        open=not open
+        menu.Visible=open
+    end)
+end
+
+local function FlyTo(TargetCF)
+    local ch=LP.Character
+    if not ch or not ch:FindFirstChild("HumanoidRootPart") then return end
+    local hrp=ch.HumanoidRootPart
+    local bv=Instance.new("BodyVelocity")
+    bv.MaxForce=Vector3.new(math.huge,math.huge,math.huge)
+    bv.Parent=hrp
+    local startPos=hrp.Position
+    local endPos=TargetCF.Position
+    local distance=(endPos-startPos).Magnitude
+    local speed=distance/0.8
+    bv.Velocity=(endPos-startPos).Unit*speed
+    task.wait(0.8)
+    if bv then bv:Destroy() end
+    hrp.CFrame=TargetCF
+end
+
+-- Build Pages
+local Home=Pages["Home"]
+local welcome=MakeSection(Home,"Welcome!",0)
+local desc=Instance.new("TextLabel",Home)
+desc.Size=UDim2.new(1,-20,0,25)
+desc.Position=UDim2.new(0,10,0,45)
+desc.BackgroundTransparency=1
+desc.Text="Enjoy your time in Blox Fruits! 👑"
+desc.TextColor3=Theme.SubText
+desc.Font=Enum.Font.Gotham
+desc.TextSize=12
+desc.TextXAlignment=Enum.TextXAlignment.Left
+local unlockBtn=Instance.new("TextButton",Home)
+unlockBtn.Size=UDim2.new(1,-10,0,30)
+unlockBtn.Position=UDim2.new(0,5,0,75)
+unlockBtn.BackgroundColor3=Theme.PanelBg
+unlockBtn.Text="   Unlock Mouse"
+unlockBtn.TextColor3=Theme.Text
+unlockBtn.Font=Enum.Font.Gotham
+unlockBtn.TextSize=12
+unlockBtn.TextXAlignment=Enum.TextXAlignment.Left
+Instance.new("UICorner",unlockBtn).CornerRadius=UDim.new(0,4)
+unlockBtn.MouseButton1Click:Connect(function()
+    UserInputService.MouseIconEnabled=true
 end)
 
--- Logic Loops
-player.Idled:Connect(function()
-    if States.AntiAFK then
-        VirtualUser:CaptureController()
-        VirtualUser:ClickButton2(Vector2.new())
-    end
-end)
+local Farm=Pages["Farming"]
+MakeSection(Farm,"Farming",0)
+MakeToggle(Farm,"Auto Farm",45,false,function(s) States.AutoFarm=s end)
+MakeDropdown(Farm,"Select Method",{"Level","Boss","Chest"},90,function(opt) Config.SelectedMethod=opt end)
+MakeToggle(Farm,"Auto Set Spawn",135,false,function(s) States.AutoSpawn=s end)
 
-task.spawn(function()
-    while task.wait(2) do
-        if States.AutoQuests then
-            local ch = player.Character
-            if ch and ch:FindFirstChild("HumanoidRootPart") then
-                local closestNPC, shortDist = nil, math.huge
-                for _, v in pairs(workspace:GetChildren()) do
-                    if v:IsA("Model") and QuestNPCs[v.Name] then
-                        if v:FindFirstChild("HumanoidRootPart") then
-                            local d = (ch.HumanoidRootPart.Position - v.HumanoidRootPart.Position).Magnitude
-                            if d < shortDist then shortDist = d; closestNPC = v end
-                        end
+local Combat=Pages["Combat"]
+MakeSection(Combat,"Combat",0)
+MakeToggle(Combat,"Auto Bounty",45,false,function(s) States.AutoBounty=s end)
+MakeToggle(Combat,"Auto Sword",90,false,function(s) States.AutoSword=s end)
+MakeToggle(Combat,"Auto Gun",135,false,function(s) States.AutoGun=s end)
+
+local Teleport=Pages["Teleport"]
+MakeSection(Teleport,"Teleport",0)
+local function MakeBtn(txt,y,cb)
+    local b=Instance.new("TextButton",Teleport)
+    b.Size=UDim2.new(1,-10,0,30)
+    b.Position=UDim2.new(0,5,0,y)
+    b.BackgroundColor3=Theme.PanelBg
+    b.Text="   "..txt
+    b.TextColor3=Theme.Text
+    b.Font=Enum.Font.Gotham
+    b.TextSize=12
+    b.TextXAlignment=Enum.TextXAlignment.Left
+    Instance.new("UICorner",b).CornerRadius=UDim.new(0,4)
+    b.MouseButton1Click:Connect(cb)
+end
+MakeBtn("Starter Island",45,function() FlyTo(CFrame.new(1059,16,1547)) end)
+MakeBtn("Marine Fortress",80,function() FlyTo(CFrame.new(-4888,71,4254)) end)
+MakeBtn("Jungle",115,function() FlyTo(CFrame.new(-1250,25,340)) end)
+MakeBtn("Cursed Ship",150,function() FlyTo(CFrame.new(915,125,32700)) end)
+
+local Shop=Pages["Shop"]
+MakeSection(Shop,"Shop",0)
+
+local Misc=Pages["Misc"]
+MakeSection(Misc,"Misc",0)
+
+local Settings=Pages["Settings"]
+MakeSection(Settings,"Settings",0)
+
+for _,p in pairs(Pages) do p.CanvasSize=UDim2.new(0,0,0,#p:GetChildren()*45+40) end
+TabBtns[1].BackgroundTransparency=0
+TabBtns[1].BackgroundColor3=Theme.PanelBg
+TabBtns[1].TextColor3=Theme.Accent
+Pages["Home"].Visible=true
+
+-- Logic
+RunService.Heartbeat:Connect(function()
+    if States.AutoFarm then
+        local ch=LP.Character
+        if ch and ch:FindFirstChild("HumanoidRootPart") then
+            local closest,shortest=nil,math.huge
+            local en=workspace:FindFirstChild("Enemies")
+            if en then
+                for _,v in pairs(en:GetChildren()) do
+                    if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health>0 then
+                        local d=(ch.HumanoidRootPart.Position-v.HumanoidRootPart.Position).Magnitude
+                        if d<shortest and d<=Config.FarmRange then shortest=d;closest=v end
                     end
                 end
-                if closestNPC then
-                    FlyTo(closestNPC.HumanoidRootPart.CFrame * CFrame.new(0,0,3))
-                    task.wait(0.5)
-                    local args = {[1] = "StartQuest", [2] = closestNPC.Name}
-                    pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(args)) end)
-                    task.wait(2)
-                end
+            end
+            if closest then
+                if shortest>5 then FlyTo(closest.HumanoidRootPart.CFrame*CFrame.new(0,0,3)) end
+                local tool=ch:FindFirstChildOfClass("Tool")
+                if tool then pcall(function() tool:Activate() end) end
             end
         end
     end
 end)
-
-RunService.Heartbeat:Connect(function()
-    if not States.AutoFarm then return end
-    local ch = player.Character
-    if not ch or not ch:FindFirstChild("HumanoidRootPart") then return end
-    local closest, shortest = nil, math.huge
-    local en = workspace:FindFirstChild("Enemies")
-    if en then
-        for _, v in pairs(en:GetChildren()) do
-            if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
-                local d = (ch.HumanoidRootPart.Position - v.HumanoidRootPart.Position).Magnitude
-                if d < shortest and d <= Config.FarmRange then shortest = d; closest = v end
-            end
-        end
-    end
-    if closest then
-        if shortest > 5 then FlyTo(closest.HumanoidRootPart.CFrame * CFrame.new(0,0,3)) end
-    end
-end)
-print("NOVAHUB V3 Loaded!")
+print("NOVAHUB Loaded.")
