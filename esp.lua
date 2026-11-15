@@ -1,4 +1,4 @@
--- NOVAHUB: Blox Fruits UI Clone
+-- NOVAHUB: Phase 1 (UI Framework)
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -10,12 +10,12 @@ local LocalPlayer = Players.LocalPlayer
 local oldGui = CoreGui:FindFirstChild("NOVAHUB")
 if oldGui then oldGui:Destroy() end
 
--- Theme (Matching the picture exactly)
+-- Theme
 local Theme = {
-    Bg = Color3.fromRGB(24, 24, 27),          -- Dark grey background
-    SidebarBg = Color3.fromRGB(18, 18, 20),   -- Slightly darker sidebar
-    PanelBg = Color3.fromRGB(33, 33, 36),     -- Section blocks / Buttons
-    Accent = Color3.fromRGB(138, 43, 226),    -- Purple accent
+    Bg = Color3.fromRGB(24, 24, 27),
+    SidebarBg = Color3.fromRGB(18, 18, 20),
+    PanelBg = Color3.fromRGB(33, 33, 36),
+    Accent = Color3.fromRGB(138, 43, 226),
     Text = Color3.fromRGB(240, 240, 240),
     SubText = Color3.fromRGB(170, 170, 170),
     ToggleOff = Color3.fromRGB(75, 75, 80),
@@ -68,7 +68,6 @@ local TopBar = Instance.new("Frame", MainFrame)
 TopBar.Size = UDim2.new(1, 0, 0, 40)
 TopBar.BackgroundTransparency = 1
 
--- Crown Icon (using Text label with emoji for simplicity without external images)
 local Crown = Instance.new("TextLabel", TopBar)
 Crown.Size = UDim2.new(0, 30, 0, 30)
 Crown.Position = UDim2.new(0, 20, 0.5, -15)
@@ -97,7 +96,6 @@ SubTitle.Font = Enum.Font.GothamSemibold
 SubTitle.TextSize = 12
 SubTitle.TextXAlignment = Enum.TextXAlignment.Left
 
--- Min/Max/Close buttons
 local CloseBtn = Instance.new("TextButton", TopBar)
 CloseBtn.Size = UDim2.new(0, 30, 0, 30)
 CloseBtn.Position = UDim2.new(1, -40, 0.5, -15)
@@ -107,15 +105,6 @@ CloseBtn.TextColor3 = Theme.Accent
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.TextSize = 16
 CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
-
-local MinBtn = Instance.new("TextButton", TopBar)
-MinBtn.Size = UDim2.new(0, 30, 0, 30)
-MinBtn.Position = UDim2.new(1, -70, 0.5, -15)
-MinBtn.BackgroundTransparency = 1
-MinBtn.Text = "−"
-MinBtn.TextColor3 = Theme.Accent
-MinBtn.Font = Enum.Font.GothamBold
-MinBtn.TextSize = 18
 
 -- 3. Sidebar
 local Sidebar = Instance.new("Frame", MainFrame)
@@ -131,7 +120,7 @@ ContentArea.BackgroundTransparency = 1
 
 -- 4. Sidebar Tabs Builder
 local Tabs = {"Home", "Farming", "Combat", "Teleport", "Shop", "Misc", "Settings"}
-local TabIcons = {"⌂", "⚙", "⚔", "💎", "👕", "★", "⚙"} -- Text icons matching the picture
+local TabIcons = {"⌂", "⚙", "⚔", "💎", "👕", "★", "⚙"}
 local TabButtons = {}
 local Pages = {}
 
@@ -164,7 +153,6 @@ local function createSidebarTab(name, iconText, yPos)
     lbl.TextSize = 14
     lbl.TextXAlignment = Enum.TextXAlignment.Left
 
-    -- Page frame
     local page = Instance.new("ScrollingFrame", ContentArea)
     page.Size = UDim2.new(1, -40, 1, -20)
     page.Position = UDim2.new(0, 20, 0, 10)
@@ -180,8 +168,7 @@ local function createSidebarTab(name, iconText, yPos)
     btn.MouseButton1Click:Connect(function()
         for _, b in pairs(TabButtons) do
             b.BackgroundTransparency = 1
-            b:FindFirstChildOfClass("TextLabel"):FindFirstChildOfClass("TextLabel") -- dummy to break scope
-            b:GetChildren()[2].TextColor3 = Theme.SubText -- Label
+            b:GetChildren()[2].TextColor3 = Theme.SubText
         end
         for _, p in pairs(Pages) do p.Visible = false end
         
@@ -328,7 +315,6 @@ local function createDropdown(parent, text, options, yPos, callback)
 end
 
 -- 6. Build Content Pages
--- Home
 local Home = Pages["Home"]
 createSection(Home, "Welcome!", 0)
 local welcomeDesc = Instance.new("TextLabel", Home)
@@ -341,21 +327,18 @@ welcomeDesc.Font = Enum.Font.Gotham
 welcomeDesc.TextSize = 14
 welcomeDesc.TextXAlignment = Enum.TextXAlignment.Left
 
--- Farming
 local Farm = Pages["Farming"]
 createSection(Farm, "Farming", 0)
 createToggle(Farm, "Auto Farm", 55, false, function(s) print("Auto Farm:", s) end)
 createDropdown(Farm, "Select Method", {"Level", "Boss", "Chest"}, 110, function(opt) print("Method:", opt) end)
 createToggle(Farm, "Auto Set Spawn", 165, false, function(s) print("Auto Set Spawn:", s) end)
 
--- Combat
 local Combat = Pages["Combat"]
 createSection(Combat, "Combat", 0)
 createToggle(Combat, "Auto Bounty", 55, false, function(s) print("Auto Bounty:", s) end)
 createToggle(Combat, "Auto Sword", 110, false, function(s) print("Auto Sword:", s) end)
 createToggle(Combat, "Auto Gun", 165, false, function(s) print("Auto Gun:", s) end)
 
--- Teleport, Shop, Misc
 local Teleport = Pages["Teleport"]
 createSection(Teleport, "Teleport", 0)
 
@@ -365,7 +348,6 @@ createSection(Shop, "Shop", 0)
 local Misc = Pages["Misc"]
 createSection(Misc, "Misc", 0)
 
--- Settings
 local Settings = Pages["Settings"]
 createSection(Settings, "Settings", 0)
 createToggle(Settings, "Auto Stats", 55, false, function(s) print("Auto Stats:", s) end)
@@ -375,8 +357,10 @@ for _, page in pairs(Pages) do
     page.CanvasSize = UDim2.new(0, 0, 0, #page:GetChildren() * 60 + 50)
 end
 
--- Initial Tab Active State (Home)
+-- Initial Tab Active State
 TabButtons[1].BackgroundTransparency = 0
 TabButtons[1].BackgroundColor3 = Theme.PanelBg
 TabButtons[1]:GetChildren()[2].TextColor3 = Theme.Accent
 Pages["Home"].Visible = true
+
+print("NOVAHUB Phase 1 Loaded.")
