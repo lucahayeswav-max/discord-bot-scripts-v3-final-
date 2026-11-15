@@ -1,3 +1,4 @@
+-- NOVAHUB: Phase 2.5 (Fixed Combat + Teleports)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -53,12 +54,8 @@ Stroke.Thickness = 1.5
 local drag, dragIn, dragStart, startPos
 Main.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        drag = true
-        dragStart = input.Position
-        startPos = Main.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then drag = false end
-        end)
+        drag = true; dragStart = input.Position; startPos = Main.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then drag = false end end)
     end
 end)
 Main.InputChanged:Connect(function(input)
@@ -76,53 +73,32 @@ TopBar.Size = UDim2.new(1, 0, 0, 35)
 TopBar.BackgroundTransparency = 1
 
 local Crown = Instance.new("TextLabel", TopBar)
-Crown.Size = UDim2.new(0, 25, 0, 25)
-Crown.Position = UDim2.new(0, 15, 0.5, -12)
-Crown.BackgroundTransparency = 1
-Crown.Text = "👑"
-Crown.TextColor3 = Theme.Accent
-Crown.TextSize = 18
+Crown.Size = UDim2.new(0, 25, 0, 25); Crown.Position = UDim2.new(0, 15, 0.5, -12)
+Crown.BackgroundTransparency = 1; Crown.Text = "👑"; Crown.TextColor3 = Theme.Accent; Crown.TextSize = 18
 
 local Title = Instance.new("TextLabel", TopBar)
-Title.Size = UDim2.new(0, 150, 0, 15)
-Title.Position = UDim2.new(0, 45, 0.5, -8)
-Title.BackgroundTransparency = 1
-Title.Text = "NOVAHUB"
-Title.TextColor3 = Theme.Text
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 14
-Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Size = UDim2.new(0, 150, 0, 15); Title.Position = UDim2.new(0, 45, 0.5, -8)
+Title.BackgroundTransparency = 1; Title.Text = "NOVAHUB"; Title.TextColor3 = Theme.Text
+Title.Font = Enum.Font.GothamBold; Title.TextSize = 14; Title.TextXAlignment = Enum.TextXAlignment.Left
 
 local SubTitle = Instance.new("TextLabel", TopBar)
-SubTitle.Size = UDim2.new(0, 150, 0, 12)
-SubTitle.Position = UDim2.new(0, 45, 0.5, 5)
-SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "Script Hub"
-SubTitle.TextColor3 = Theme.Accent
-SubTitle.Font = Enum.Font.GothamSemibold
-SubTitle.TextSize = 10
-SubTitle.TextXAlignment = Enum.TextXAlignment.Left
+SubTitle.Size = UDim2.new(0, 150, 0, 12); SubTitle.Position = UDim2.new(0, 45, 0.5, 5)
+SubTitle.BackgroundTransparency = 1; SubTitle.Text = "Script Hub"; SubTitle.TextColor3 = Theme.Accent
+SubTitle.Font = Enum.Font.GothamSemibold; SubTitle.TextSize = 10; SubTitle.TextXAlignment = Enum.TextXAlignment.Left
 
 local CloseBtn = Instance.new("TextButton", TopBar)
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0.5, -15)
-CloseBtn.BackgroundTransparency = 1
-CloseBtn.Text = "✕"
-CloseBtn.TextColor3 = Theme.Accent
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 14
+CloseBtn.Size = UDim2.new(0, 30, 0, 30); CloseBtn.Position = UDim2.new(1, -35, 0.5, -15)
+CloseBtn.BackgroundTransparency = 1; CloseBtn.Text = "✕"; CloseBtn.TextColor3 = Theme.Accent
+CloseBtn.Font = Enum.Font.GothamBold; CloseBtn.TextSize = 14
 CloseBtn.MouseButton1Click:Connect(function() Main.Visible = false; OpenBtn.Visible = true end)
 OpenBtn.MouseButton1Click:Connect(function() Main.Visible = true; OpenBtn.Visible = false end)
 
 local Sidebar = Instance.new("Frame", Main)
-Sidebar.Size = UDim2.new(0, 130, 1, -35)
-Sidebar.Position = UDim2.new(0, 0, 0, 35)
-Sidebar.BackgroundColor3 = Theme.SidebarBg
-Sidebar.BorderSizePixel = 0
+Sidebar.Size = UDim2.new(0, 130, 1, -35); Sidebar.Position = UDim2.new(0, 0, 0, 35)
+Sidebar.BackgroundColor3 = Theme.SidebarBg; Sidebar.BorderSizePixel = 0
 
 local Content = Instance.new("Frame", Main)
-Content.Size = UDim2.new(1, -130, 1, -35)
-Content.Position = UDim2.new(0, 130, 0, 35)
+Content.Size = UDim2.new(1, -130, 1, -35); Content.Position = UDim2.new(0, 130, 0, 35)
 Content.BackgroundTransparency = 1
 
 local Tabs = {"Home", "Farming", "Combat", "Teleport", "Shop", "Misc", "Config"}
@@ -131,82 +107,65 @@ local TabBtns, Pages = {}, {}
 
 for i, name in ipairs(Tabs) do
     local btn = Instance.new("TextButton", Sidebar)
-    btn.Size = UDim2.new(1, -16, 0, 30)
-    btn.Position = UDim2.new(0, 8, 0, (i - 1) * 35 + 5)
-    btn.BackgroundTransparency = 1
-    btn.Text = ""
+    btn.Size = UDim2.new(1, -16, 0, 30); btn.Position = UDim2.new(0, 8, 0, (i - 1) * 35 + 5)
+    btn.BackgroundTransparency = 1; btn.Text = ""
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
     
     local icon = Instance.new("TextLabel", btn)
-    icon.Size = UDim2.new(0, 20, 0, 20)
-    icon.Position = UDim2.new(0, 5, 0.5, -10)
-    icon.BackgroundTransparency = 1
-    icon.Text = Icons[i]
-    icon.TextColor3 = Theme.Accent
-    icon.Font = Enum.Font.GothamBold
-    icon.TextSize = 14
+    icon.Size = UDim2.new(0, 20, 0, 20); icon.Position = UDim2.new(0, 5, 0.5, -10)
+    icon.BackgroundTransparency = 1; icon.Text = Icons[i]
+    icon.TextColor3 = Theme.Accent; icon.Font = Enum.Font.GothamBold; icon.TextSize = 14
     
     local lbl = Instance.new("TextLabel", btn)
-    lbl.Size = UDim2.new(1, -30, 1, 0)
-    lbl.Position = UDim2.new(0, 30, 0, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = name
-    lbl.TextColor3 = Theme.SubText
-    lbl.Font = Enum.Font.GothamSemibold
-    lbl.TextSize = 12
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Size = UDim2.new(1, -30, 1, 0); lbl.Position = UDim2.new(0, 30, 0, 0)
+    lbl.BackgroundTransparency = 1; lbl.Text = name; lbl.TextColor3 = Theme.SubText
+    lbl.Font = Enum.Font.GothamSemibold; lbl.TextSize = 12; lbl.TextXAlignment = Enum.TextXAlignment.Left
     
     local page = Instance.new("ScrollingFrame", Content)
-    page.Size = UDim2.new(1, -20, 1, -15)
-    page.Position = UDim2.new(0, 10, 0, 5)
-    page.BackgroundTransparency = 1
-    page.ScrollBarThickness = 2
-    page.ScrollBarImageColor3 = Theme.Accent
-    page.Visible = false
+    page.Size = UDim2.new(1, -20, 1, -15); page.Position = UDim2.new(0, 10, 0, 5)
+    page.BackgroundTransparency = 1; page.ScrollBarThickness = 2
+    page.ScrollBarImageColor3 = Theme.Accent; page.Visible = false
     
     table.insert(TabBtns, btn)
     Pages[name] = page
     
     btn.MouseButton1Click:Connect(function()
-        for _, b in ipairs(TabBtns) do
-            b.BackgroundTransparency = 1
-            b:GetChildren()[2].TextColor3 = Theme.SubText
-        end
+        for _, b in ipairs(TabBtns) do b.BackgroundTransparency = 1; b:GetChildren()[2].TextColor3 = Theme.SubText end
         for _, p in pairs(Pages) do p.Visible = false end
-        btn.BackgroundTransparency = 0
-        btn.BackgroundColor3 = Theme.PanelBg
+        btn.BackgroundTransparency = 0; btn.BackgroundColor3 = Theme.PanelBg
         btn:GetChildren()[2].TextColor3 = Theme.Accent
         page.Visible = true
     end)
 end
 
+local function MakeSection(parent, text, y)
+    local f = Instance.new("Frame", parent)
+    f.Size = UDim2.new(1, -10, 0, 35); f.Position = UDim2.new(0, 5, 0, y)
+    f.BackgroundColor3 = Theme.PanelBg; Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
+    local acc = Instance.new("Frame", f)
+    acc.Size = UDim2.new(0, 3, 0, 12); acc.Position = UDim2.new(0, 10, 0.5, -6)
+    acc.BackgroundColor3 = Theme.Accent; Instance.new("UICorner", acc).CornerRadius = UDim.new(1, 0)
+    local l = Instance.new("TextLabel", f)
+    l.Size = UDim2.new(1, -30, 1, 0); l.Position = UDim2.new(0, 20, 0, 0)
+    l.BackgroundTransparency = 1; l.Text = text; l.TextColor3 = Theme.Text
+    l.Font = Enum.Font.GothamBold; l.TextSize = 12; l.TextXAlignment = Enum.TextXAlignment.Left
+end
+
 local function MakeToggle(parent, text, y, def, cb)
     local f = Instance.new("Frame", parent)
-    f.Size = UDim2.new(1, -20, 0, 35)
-    f.Position = UDim2.new(0, 5, 0, y)
-    f.BackgroundColor3 = Theme.PanelBg
-    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
+    f.Size = UDim2.new(1, -20, 0, 35); f.Position = UDim2.new(0, 5, 0, y)
+    f.BackgroundColor3 = Theme.PanelBg; Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
     local l = Instance.new("TextLabel", f)
-    l.Size = UDim2.new(1, -50, 1, 0)
-    l.Position = UDim2.new(0, 10, 0, 0)
-    l.BackgroundTransparency = 1
-    l.Text = text
-    l.TextColor3 = Theme.Text
-    l.Font = Enum.Font.Gotham
-    l.TextSize = 12
-    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.Size = UDim2.new(1, -50, 1, 0); l.Position = UDim2.new(0, 10, 0, 0)
+    l.BackgroundTransparency = 1; l.Text = text; l.TextColor3 = Theme.Text
+    l.Font = Enum.Font.Gotham; l.TextSize = 12; l.TextXAlignment = Enum.TextXAlignment.Left
     local s = Instance.new("TextButton", f)
-    s.Size = UDim2.new(0, 30, 0, 16)
-    s.Position = UDim2.new(1, -40, 0.5, -8)
-    s.BackgroundColor3 = def and Theme.Accent or Theme.ToggleOff
-    s.Text = ""
-    s.AutoButtonColor = false
-    Instance.new("UICorner", s).CornerRadius = UDim.new(1, 0)
+    s.Size = UDim2.new(0, 30, 0, 16); s.Position = UDim2.new(1, -40, 0.5, -8)
+    s.BackgroundColor3 = def and Theme.Accent or Theme.ToggleOff; s.Text = ""
+    s.AutoButtonColor = false; Instance.new("UICorner", s).CornerRadius = UDim.new(1, 0)
     local c = Instance.new("Frame", s)
-    c.Size = UDim2.new(0, 12, 0, 12)
-    c.Position = def and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
-    c.BackgroundColor3 = Theme.Text
-    Instance.new("UICorner", c).CornerRadius = UDim.new(1, 0)
+    c.Size = UDim2.new(0, 12, 0, 12); c.Position = def and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
+    c.BackgroundColor3 = Theme.Text; Instance.new("UICorner", c).CornerRadius = UDim.new(1, 0)
     local st = def
     s.MouseButton1Click:Connect(function()
         st = not st
@@ -218,41 +177,26 @@ end
 
 local function MakeSlider(parent, text, y, min, max, def, cb)
     local f = Instance.new("Frame", parent)
-    f.Size = UDim2.new(1, -20, 0, 45)
-    f.Position = UDim2.new(0, 5, 0, y)
-    f.BackgroundColor3 = Theme.PanelBg
-    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
+    f.Size = UDim2.new(1, -20, 0, 45); f.Position = UDim2.new(0, 5, 0, y)
+    f.BackgroundColor3 = Theme.PanelBg; Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
     local l = Instance.new("TextLabel", f)
-    l.Size = UDim2.new(1, -20, 0, 15)
-    l.Position = UDim2.new(0, 10, 0, 5)
-    l.BackgroundTransparency = 1
-    l.Text = text .. ": " .. def
-    l.TextColor3 = Theme.Text
-    l.Font = Enum.Font.Gotham
-    l.TextSize = 11
-    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.Size = UDim2.new(1, -20, 0, 15); l.Position = UDim2.new(0, 10, 0, 5)
+    l.BackgroundTransparency = 1; l.Text = text .. ": " .. def; l.TextColor3 = Theme.Text
+    l.Font = Enum.Font.Gotham; l.TextSize = 11; l.TextXAlignment = Enum.TextXAlignment.Left
     local bg = Instance.new("Frame", f)
-    bg.Size = UDim2.new(1, -20, 0, 6)
-    bg.Position = UDim2.new(0, 10, 0, 28)
-    bg.BackgroundColor3 = Theme.ToggleOff
-    Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
+    bg.Size = UDim2.new(1, -20, 0, 6); bg.Position = UDim2.new(0, 10, 0, 28)
+    bg.BackgroundColor3 = Theme.ToggleOff; Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
     local fill = Instance.new("Frame", bg)
-    fill.Size = UDim2.new((def - min) / (max - min), 0, 1, 0)
-    fill.BackgroundColor3 = Theme.Accent
+    fill.Size = UDim2.new((def - min) / (max - min), 0, 1, 0); fill.BackgroundColor3 = Theme.Accent
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
     local knob = Instance.new("Frame", bg)
-    knob.Size = UDim2.new(0, 12, 0, 12)
-    knob.Position = UDim2.new((def - min) / (max - min), -6, 0.5, -6)
-    knob.BackgroundColor3 = Theme.Text
-    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+    knob.Size = UDim2.new(0, 12, 0, 12); knob.Position = UDim2.new((def - min) / (max - min), -6, 0.5, -6)
+    knob.BackgroundColor3 = Theme.Text; Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
     local dr = false
     local function upd(input)
         local p = math.clamp((input.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
-        fill.Size = UDim2.new(p, 0, 1, 0)
-        knob.Position = UDim2.new(p, -6, 0.5, -6)
-        local v = math.floor(min + (p * (max - min)))
-        l.Text = text .. ": " .. v
-        cb(v)
+        fill.Size = UDim2.new(p, 0, 1, 0); knob.Position = UDim2.new(p, -6, 0.5, -6)
+        local v = math.floor(min + (p * (max - min))); l.Text = text .. ": " .. v; cb(v)
     end
     bg.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dr = true; upd(input) end
@@ -267,27 +211,37 @@ end
 
 local function MakeBtn(parent, text, y, cb)
     local b = Instance.new("TextButton", parent)
-    b.Size = UDim2.new(1, -20, 0, 30)
-    b.Position = UDim2.new(0, 5, 0, y)
-    b.BackgroundColor3 = Theme.PanelBg
-    b.Text = text
-    b.TextColor3 = Theme.Text
-    b.Font = Enum.Font.Gotham
-    b.TextSize = 12
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+    b.Size = UDim2.new(1, -20, 0, 30); b.Position = UDim2.new(0, 5, 0, y)
+    b.BackgroundColor3 = Theme.PanelBg; b.Text = text; b.TextColor3 = Theme.Text
+    b.Font = Enum.Font.Gotham; b.TextSize = 12; Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
     b.MouseButton1Click:Connect(cb)
 end
 
-MakeToggle(Pages["Farming"], "Auto Farm", 40, false, function(s) States.AutoFarm = s end)
+-- Populate Pages
+MakeToggle(Pages["Farming"], "Auto Farm (TP + Hit)", 40, false, function(s) States.AutoFarm = s end)
 MakeSlider(Pages["Farming"], "Farm Range", 80, 10, 150, 30, function(v) Config.FarmRange = v end)
+
 MakeToggle(Pages["Combat"], "Fast Attack", 40, false, function(s) States.FastAttack = s end)
 MakeSlider(Pages["Combat"], "Attack Speed (x100)", 80, 1, 50, 10, function(v) Config.AttackSpeed = v / 100 end)
-MakeBtn(Pages["Teleport"], "TP Cursed Ship", 40, function() print("TP") end)
-MakeBtn(Pages["Teleport"], "TP Castle", 80, function() print("TP") end)
+
+-- Teleports
+local Teleport = Pages["Teleport"]
+MakeSection(Teleport, "First Sea", 0)
+MakeBtn(Teleport, "Bandit", 40, function() if LP.Character then LP.Character.HumanoidRootPart.CFrame = CFrame.new(1059, 16, 1547) end end)
+MakeBtn(Teleport, "Marine Fortress", 80, function() if LP.Character then LP.Character.HumanoidRootPart.CFrame = CFrame.new(-4888, 71, 4254) end end)
+MakeBtn(Teleport, "Sky Island", 120, function() if LP.Character then LP.Character.HumanoidRootPart.CFrame = CFrame.new(-4600, 800, -1000) end end)
+MakeSection(Teleport, "Second Sea", 170)
+MakeBtn(Teleport, "Cursed Ship", 210, function() if LP.Character then LP.Character.HumanoidRootPart.CFrame = CFrame.new(915, 125, 32700) end end)
+MakeBtn(Teleport, "Kingdom of Rose", 250, function() if LP.Character then LP.Character.HumanoidRootPart.CFrame = CFrame.new(-623, 17, 3965) end end)
+MakeSection(Teleport, "Third Sea", 300)
+MakeBtn(Teleport, "Port Town", 340, function() if LP.Character then LP.Character.HumanoidRootPart.CFrame = CFrame.new(-280, 22, 1168) end end)
+MakeBtn(Teleport, "Great Tree", 380, function() if LP.Character then LP.Character.HumanoidRootPart.CFrame = CFrame.new(1750, 100, 1000) end end)
+
 MakeToggle(Pages["Misc"], "Fullbright", 40, false, function(s) 
     if s then Lighting.Ambient = Color3.fromRGB(255,255,255); Lighting.OutdoorAmbient = Color3.fromRGB(255,255,255); Lighting.Brightness = 2
     else Lighting.Ambient = Color3.fromRGB(70,70,70); Lighting.OutdoorAmbient = Color3.fromRGB(128,128,128); Lighting.Brightness = 1 end
 end)
+
 MakeBtn(Pages["Config"], "Change Color", 40, function()
     cIdx = cIdx + 1; if cIdx > #ColorList then cIdx = 1 end
     Stroke.Color = ColorList[cIdx]; Crown.TextColor3 = ColorList[cIdx]; SubTitle.TextColor3 = ColorList[cIdx]
@@ -299,20 +253,28 @@ end)
 MakeToggle(Pages["Config"], "Anti-AFK", 120, false, function(s) States.AntiAFK = s end)
 
 for _, p in pairs(Pages) do p.CanvasSize = UDim2.new(0, 0, 0, #p:GetChildren() * 45 + 50) end
-TabBtns[1].BackgroundTransparency = 0
-TabBtns[1].BackgroundColor3 = Theme.PanelBg
-TabBtns[1]:GetChildren()[2].TextColor3 = Theme.Accent
-Pages["Home"].Visible = true
+TabBtns[1].BackgroundTransparency = 0; TabBtns[1].BackgroundColor3 = Theme.PanelBg
+TabBtns[1]:GetChildren()[2].TextColor3 = Theme.Accent; Pages["Home"].Visible = true
 
+-- Logic
 LP.Idled:Connect(function() if States.AntiAFK then VirtualUser:CaptureController(); VirtualUser:ClickButton2(Vector2.new()) end end)
 
-local function attack()
-    local cR = ReplicatedStorage:FindFirstChild("Combat")
-    if cR and cR:FindFirstChild("RemoteEvent") then cR.RemoteEvent:FireServer("Button1", true)
-    else local ch = LP.Character; if ch and ch:FindFirstChildOfClass("Tool") then ch:FindFirstChildOfClass("Tool"):Activate() end end
+local function Attack()
+    local char = LP.Character
+    if not char then return end
+    local tool = char:FindFirstChildOfClass("Tool")
+    if tool then
+        tool:Activate()
+    else
+        -- If no weapon equipped, spam click for melee
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton1(Vector2.new(0,0), game.Workspace.CurrentCamera.CFrame)
+    end
 end
 
-RunService.Heartbeat:Connect(function() if States.FastAttack then attack(); task.wait(Config.AttackSpeed) end end)
+RunService.Heartbeat:Connect(function()
+    if States.FastAttack then Attack(); task.wait(Config.AttackSpeed) end
+end)
 
 RunService.Heartbeat:Connect(function()
     if not States.AutoFarm then return end
@@ -330,8 +292,8 @@ RunService.Heartbeat:Connect(function()
     end
     if closest then
         if shortest > 5 then ch.HumanoidRootPart.CFrame = closest.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3) end
-        attack()
+        Attack()
     end
 end)
 
-print("NOVAHUB Loaded.")
+print("NOVAHUB Phase 2.5 Loaded.")
