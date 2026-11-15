@@ -1,5 +1,4 @@
 local Players=game:GetService("Players")
-local RunService=game:GetService("RunService")
 local UserInputService=game:GetService("UserInputService")
 local TweenService=game:GetService("TweenService")
 local CoreGui=game:GetService("CoreGui")
@@ -7,69 +6,53 @@ local VirtualUser=game:GetService("VirtualUser")
 local Lighting=game:GetService("Lighting")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local LP=Players.LocalPlayer
-
-if CoreGui:FindFirstChild("NOVAHUB") then CoreGui.NOVAHUB:Destroy() end
+if CoreGui:FindFirstChild("NOVAHUB") then pcall(function() getgenv().NOVAHUB_Cleanup() end); CoreGui.NOVAHUB:Destroy() end
+local IsRunning=true
+local UI_Connections={}
+local FlyToken=0
+local currentTween=nil
+local cachedNPCs={}
 local States={AutoFarm=false,AutoQuests=false,AntiAFK=false}
-local Config={FarmRange=30}
+local Config={FarmRange=30,TargetNPC="None",Fullbright=false}
 local Theme={Bg=Color3.fromRGB(20,20,24),Panel=Color3.fromRGB(30,30,36),Accent=Color3.fromRGB(145,75,255),Text=Color3.fromRGB(245,245,250),Muted=Color3.fromRGB(150,150,160),Off=Color3.fromRGB(60,60,70)}
-local Colors={{Name="Purple",Color=Color3.fromRGB(145,75,255)},{Name="Blue",Color=Color3.fromRGB(40,145,255)},{Name="Red",Color3.fromRGB(255,65,85)}}
+local Colors={{Name="Purple",Color=Color3.fromRGB(145,75,255)},{Name="Blue",Color=Color3.fromRGB(40,145,255)},{Name="Red",Color=Color3.fromRGB(255,65,85)}}
 local cIdx=1
-
--- Your exact list of Quest Givers
-local Quests={
-    ["Bandit Quest Giver"]=1,["Marine Leader"]=2,["Adventurer"]=3,["Pirate Adventurer"]=4,["Villager"]=5,
-    ["Marine"]=6,["Mole"]=7,["Sky Quest Giver 2"]=8,["Freezeburg Quest Giver"]=9,["Jail Keeper"]=10,
-    ["Head Jailer"]=11,["Colosseum Quest Giver"]=12,["The Mayor"]=13,["King Neptune"]=14,
-    ["Area 1 Quest Giver"]=15,["Area 2 Quest Giver"]=16,["Marine Quest Giver"]=17,["Graveyard Quest Giver"]=18,
-    ["Snow Quest Giver"]=19,["Ice Quest Giver"]=20,["Fire Quest Giver"]=21,["Rear Crew Quest Giver"]=22,
-    ["Front Crew Quest Giver"]=23,["Frost Quest Giver"]=24,["Forgotten Quest Giver"]=25,
-    ["Pirate Port Quest Giver"]=26,["Dragon Crew Quest Giver"]=27,["Hydra Town Quest Giver"]=28,
-    ["Marine Tree Quest Giver"]=29,["Turtle Adventure Quest Giver"]=30,["Deep Forest Quest Giver"]=31,
-    ["Deep Forest Area 2 Quest Giver"]=32,["Haunted Castle Quest Giver"]=33,["Haunted Castle Quest Giver 2"]=34,
-    ["Peanut Quest Giver"]=35,["Ice Cream Quest Giver"]=36,["Cake Quest Giver 1"]=37,["Cake Quest Giver 2"]=38,
-    ["Chocolate Quest Giver 1"]=39,["Chocolate Quest Giver 2"]=40,["Candy Cane Quest Giver"]=41,
-    ["Tiki Quest Giver 1"]=42,["Tiki Quest Giver 2"]=43,["Tiki Quest Giver 3"]=44,
-    ["Submerged Quest Giver 1"]=45,["Submerged Quest Giver 2"]=46,["Submerged Quest Giver 3"]=47
-}
-
-local Locs={
-    ["First Sea"]={["Starter"]=CFrame.new(1059,16,1547),["Marine"]=CFrame.new(-4888,71,4254),["Jungle"]=CFrame.new(-1250,25,340),["Sky"]=CFrame.new(-4600,800,-1000)},
-    ["Second Sea"]={["Kingdom"]=CFrame.new(-623,17,3965),["Green Zone"]=CFrame.new(-200,20,3500),["Cursed Ship"]=CFrame.new(915,125,32700)},
-    ["Third Sea"]={["Port Town"]=CFrame.new(-280,22,1168),["Great Tree"]=CFrame.new(1750,100,1000),["Hydra"]=CFrame.new(5000,30,1000)}
-}
-
+local origAmbient=Lighting.Ambient
+local origOutdoor=Lighting.OutdoorAmbient
+local origBrightness=Lighting.Brightness
+local Quests={["Bandit Quest Giver"]=1,["Marine Leader"]=2,["Adventurer"]=3,["Pirate Adventurer"]=4,["Villager"]=5,["Marine"]=6,["Mole"]=7,["Sky Quest Giver 2"]=8,["Freezeburg Quest Giver"]=9,["Jail Keeper"]=10,["Head Jailer"]=11,["Colosseum Quest Giver"]=12,["The Mayor"]=13,["King Neptune"]=14,["Area 1 Quest Giver"]=15,["Area 2 Quest Giver"]=16,["Marine Quest Giver"]=17,["Graveyard Quest Giver"]=18,["Snow Quest Giver"]=19,["Ice Quest Giver"]=20,["Fire Quest Giver"]=21,["Rear Crew Quest Giver"]=22,["Front Crew Quest Giver"]=23,["Frost Quest Giver"]=24,["Forgotten Quest Giver"]=25,["Pirate Port Quest Giver"]=26,["Dragon Crew Quest Giver"]=27,["Hydra Town Quest Giver"]=28,["Marine Tree Quest Giver"]=29,["Turtle Adventure Quest Giver"]=30,["Deep Forest Quest Giver"]=31,["Deep Forest Area 2 Quest Giver"]=32,["Haunted Castle Quest Giver"]=33,["Haunted Castle Quest Giver 2"]=34,["Peanut Quest Giver"]=35,["Ice Cream Quest Giver"]=36,["Cake Quest Giver 1"]=37,["Cake Quest Giver 2"]=38,["Chocolate Quest Giver 1"]=39,["Chocolate Quest Giver 2"]=40,["Candy Cane Quest Giver"]=41,["Tiki Quest Giver 1"]=42,["Tiki Quest Giver 2"]=43,["Tiki Quest Giver 3"]=44,["Submerged Quest Giver 1"]=45,["Submerged Quest Giver 2"]=46,["Submerged Quest Giver 3"]=47}
+local Locs={["First Sea"]={["Starter"]=CFrame.new(1059,16,1547),["Marine"]=CFrame.new(-4888,71,4254),["Jungle"]=CFrame.new(-1250,25,340),["Sky"]=CFrame.new(-4600,800,-1000)},["Second Sea"]={["Kingdom"]=CFrame.new(-623,17,3965),["Green Zone"]=CFrame.new(-200,20,3500),["Cursed Ship"]=CFrame.new(915,125,32700)},["Third Sea"]={["Port Town"]=CFrame.new(-280,22,1168),["Great Tree"]=CFrame.new(1750,100,1000),["Hydra"]=CFrame.new(5000,30,1000)}}
+local function AddConn(conn) table.insert(UI_Connections,conn) end
 local gui=Instance.new("ScreenGui",CoreGui)
 gui.Name="NOVAHUB"
 gui.ResetOnSpawn=false
 local main=Instance.new("Frame",gui)
-main.Size=UDim2.fromOffset(420,260)
-main.Position=UDim2.new(0.5,-210,0.5,-130)
+main.Size=UDim2.fromOffset(420,310)
+main.Position=UDim2.new(0.5,-210,0.5,-155)
 main.BackgroundColor3=Theme.Bg
 main.BorderSizePixel=0
 main.Active=true
-main.ClipsDescendants=true
+main.ClipsDescendants=false
 Instance.new("UICorner",main).CornerRadius=UDim.new(0,10)
 local stroke=Instance.new("UIStroke",main)
 stroke.Color=Theme.Accent
 stroke.Thickness=1.5
-
+local openBtn=Instance.new("TextButton",gui)
+openBtn.Size=UDim2.fromOffset(40,40)
+openBtn.Position=UDim2.new(0,20,0.5,-20)
+openBtn.BackgroundColor3=Theme.Accent
+openBtn.Text="N"
+openBtn.TextColor3=Theme.Text
+openBtn.Font=Enum.Font.GothamBold
+openBtn.TextSize=20
+openBtn.Visible=false
+Instance.new("UICorner",openBtn).CornerRadius=UDim.new(1,0)
 local drag,dragIn,dragStart,startPos
-main.InputBegan:Connect(function(input)
-    if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
-        drag=true;dragStart=input.Position;startPos=main.Position
-        input.Changed:Connect(function() if input.UserInputState==Enum.UserInputState.End then drag=false end end)
-    end
-end)
-main.InputChanged:Connect(function(input)
-    if input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch then dragIn=input end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if input==dragIn and drag then
-        local delta=input.Position-dragStart
-        main.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+delta.X,startPos.Y.Scale,startPos.Y.Offset+delta.Y)
-    end
-end)
-
+AddConn(main.InputBegan:Connect(function(input) if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then drag=true;dragStart=input.Position;startPos=main.Position AddConn(input.Changed:Connect(function() if input.UserInputState==Enum.UserInputState.End then drag=false end end)) end end))
+AddConn(main.InputChanged:Connect(function(input) if input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch then dragIn=input end end))
+AddConn(UserInputService.InputChanged:Connect(function(input) if input==dragIn and drag then local delta=input.Position-dragStart main.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+delta.X,startPos.Y.Scale,startPos.Y.Offset+delta.Y) end end))
+local function cleanup() IsRunning=false for _,conn in ipairs(UI_Connections) do if conn then pcall(function() conn:Disconnect() end) end end if currentTween then pcall(function() currentTween:Cancel() end) end if Config.Fullbright then Lighting.Ambient=origAmbient;Lighting.OutdoorAmbient=origOutdoor;Lighting.Brightness=origBrightness end gui:Destroy() end
+getgenv().NOVAHUB_Cleanup=cleanup
 local top=Instance.new("Frame",main)
 top.Size=UDim2.new(1,0,0,30)
 top.BackgroundColor3=Theme.Panel
@@ -79,11 +62,21 @@ local title=Instance.new("TextLabel",top)
 title.Position=UDim2.fromOffset(10,0)
 title.Size=UDim2.new(1,-40,1,0)
 title.BackgroundTransparency=1
-title.Text="NOVAHUB"
+title.Text="NOVAHUB V9"
 title.TextColor3=Theme.Text
 title.Font=Enum.Font.GothamBold
 title.TextSize=14
 title.TextXAlignment=Enum.TextXAlignment.Left
+local minBtn=Instance.new("TextButton",top)
+minBtn.Size=UDim2.fromOffset(25,25)
+minBtn.Position=UDim2.new(1,-60,0,2)
+minBtn.BackgroundTransparency=1
+minBtn.Text="−"
+minBtn.TextColor3=Theme.Text
+minBtn.Font=Enum.Font.GothamBold
+minBtn.TextSize=18
+AddConn(minBtn.MouseButton1Click:Connect(function() main.Visible=false; openBtn.Visible=true end))
+AddConn(openBtn.MouseButton1Click:Connect(function() main.Visible=true; openBtn.Visible=false end))
 local close=Instance.new("TextButton",top)
 close.Size=UDim2.fromOffset(25,25)
 close.Position=UDim2.new(1,-30,0,2)
@@ -92,195 +85,228 @@ close.Text="X"
 close.TextColor3=Theme.Accent
 close.Font=Enum.Font.GothamBold
 close.TextSize=14
-close.MouseButton1Click:Connect(function() gui:Destroy() end)
-
+AddConn(close.MouseButton1Click:Connect(cleanup))
 local content=Instance.new("Frame",main)
 content.Position=UDim2.fromOffset(10,35)
 content.Size=UDim2.new(1,-20,1,-45)
 content.BackgroundTransparency=1
-
 local tabs={{"Farm","⚒"},{"TP","➤"},{"Misc","★"},{"Cfg","⚙"}}
 local pages,tabBtns={},{}
-
+local themeObjects={}
 for i,tab in ipairs(tabs) do
-    local btn=Instance.new("TextButton",content)
-    btn.Size=UDim2.new(0.25,-4,0,28)
-    btn.Position=UDim2.new((i-1)*0.25,0,0,0)
-    btn.BackgroundColor3=Theme.Panel
-    btn.Text=tab[2].." "..tab[1]
-    btn.TextColor3=Theme.Muted
-    btn.Font=Enum.Font.GothamBold
-    btn.TextSize=11
-    Instance.new("UICorner",btn).CornerRadius=UDim.new(0,6)
-    tabBtns[tab[1]]=btn
-    
-    local page=Instance.new("ScrollingFrame",content)
-    page.Size=UDim2.new(1,0,1,-35)
-    page.Position=UDim2.fromOffset(0,35)
-    page.BackgroundTransparency=1
-    page.BorderSizePixel=0
-    page.ScrollBarThickness=2
-    page.ScrollBarImageColor3=Theme.Accent
-    page.Visible=false
-    local layout=Instance.new("UIListLayout",page)
-    layout.Padding=UDim.new(0,6)
-    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        page.CanvasSize=UDim2.fromOffset(0,layout.AbsoluteContentSize.Y)
-    end)
-    pages[tab[1]]=page
-    
-    btn.MouseButton1Click:Connect(function()
-        for n,b in pairs(tabBtns) do
-            b.BackgroundColor3=n==tab[1] and Theme.Accent or Theme.Panel
-            b.TextColor3=n==tab[1] and Theme.Text or Theme.Muted
-        end
-        for n,p in pairs(pages) do p.Visible=n==tab[1] end
-    end)
+local btn=Instance.new("TextButton",content)
+btn.Size=UDim2.new(0.25,-4,0,28)
+btn.Position=UDim2.new((i-1)*0.25,0,0,0)
+btn.BackgroundColor3=Theme.Panel
+btn.Text=tab[2].." "..tab[1]
+btn.TextColor3=Theme.Muted
+btn.Font=Enum.Font.GothamBold
+btn.TextSize=11
+Instance.new("UICorner",btn).CornerRadius=UDim.new(0,6)
+tabBtns[tab[1]]=btn
+table.insert(themeObjects,{type="tab",obj=btn,tabName=tab[1]})
+local page=Instance.new("ScrollingFrame",content)
+page.Size=UDim2.new(1,0,1,-35)
+page.Position=UDim2.fromOffset(0,35)
+page.BackgroundTransparency=1
+page.BorderSizePixel=0
+page.ScrollBarThickness=2
+page.ScrollBarImageColor3=Theme.Accent
+page.Visible=false
+local layout=Instance.new("UIListLayout",page)
+layout.Padding=UDim.new(0,6)
+AddConn(layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() page.CanvasSize=UDim2.fromOffset(0,layout.AbsoluteContentSize.Y) end))
+pages[tab[1]]=page
+AddConn(btn.MouseButton1Click:Connect(function() for n,b in pairs(tabBtns) do b.BackgroundColor3=n==tab[1] and Theme.Accent or Theme.Panel b.TextColor3=n==tab[1] and Theme.Text or Theme.Muted end for n,p in pairs(pages) do p.Visible=n==tab[1] end end))
 end
-
 local function Tog(parent,text,def,cb)
-    local row=Instance.new("Frame",parent)
-    row.Size=UDim2.new(1,0,0,30)
-    row.BackgroundColor3=Theme.Panel
-    Instance.new("UICorner",row).CornerRadius=UDim.new(0,6)
-    local l=Instance.new("TextLabel",row)
-    l.Position=UDim2.fromOffset(10,0)
-    l.Size=UDim2.new(1,-50,1,0)
-    l.BackgroundTransparency=1
-    l.Text=text
-    l.TextColor3=Theme.Text
-    l.Font=Enum.Font.Gotham
-    l.TextSize=12
-    l.TextXAlignment=Enum.TextXAlignment.Left
-    local st=def
-    local btn=Instance.new("TextButton",row)
-    btn.Size=UDim2.fromOffset(30,16)
-    btn.Position=UDim2.new(1,-40,0.5,-8)
-    btn.BackgroundColor3=st and Theme.Accent or Theme.Off
-    btn.Text=""
-    Instance.new("UICorner",btn).CornerRadius=UDim.new(0,10)
-    local dot=Instance.new("Frame",btn)
-    dot.Size=UDim2.fromOffset(12,12)
-    dot.Position=st and UDim2.new(1,-14,0,2) or UDim2.fromOffset(2,2)
-    dot.BackgroundColor3=Theme.Text
-    Instance.new("UICorner",dot).CornerRadius=UDim.new(0,10)
-    btn.MouseButton1Click:Connect(function()
-        st=not st
-        TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=st and Theme.Accent or Theme.Off}):Play()
-        TweenService:Create(dot,TweenInfo.new(0.15),{Position=st and UDim2.new(1,-14,0,2) or UDim2.fromOffset(2,2)}):Play()
-        cb(st)
-    end)
+local row=Instance.new("Frame",parent)
+row.Size=UDim2.new(1,0,0,30)
+row.BackgroundColor3=Theme.Panel
+Instance.new("UICorner",row).CornerRadius=UDim.new(0,6)
+local l=Instance.new("TextLabel",row)
+l.Position=UDim2.fromOffset(10,0)
+l.Size=UDim2.new(1,-50,1,0)
+l.BackgroundTransparency=1
+l.Text=text
+l.TextColor3=Theme.Text
+l.Font=Enum.Font.Gotham
+l.TextSize=12
+l.TextXAlignment=Enum.TextXAlignment.Left
+local st=def
+local btn=Instance.new("TextButton",row)
+btn.Size=UDim2.fromOffset(30,16)
+btn.Position=UDim2.new(1,-40,0.5,-8)
+btn.BackgroundColor3=st and Theme.Accent or Theme.Off
+btn.Text=""
+Instance.new("UICorner",btn).CornerRadius=UDim.new(0,10)
+local dot=Instance.new("Frame",btn)
+dot.Size=UDim2.fromOffset(12,12)
+dot.Position=st and UDim2.new(1,-14,0,2) or UDim2.fromOffset(2,2)
+dot.BackgroundColor3=Theme.Text
+Instance.new("UICorner",dot).CornerRadius=UDim.new(0,10)
+AddConn(btn.MouseButton1Click:Connect(function() st=not st TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=st and Theme.Accent or Theme.Off}):Play() TweenService:Create(dot,TweenInfo.new(0.15),{Position=st and UDim2.new(1,-14,0,2) or UDim2.fromOffset(2,2)}):Play() cb(st) end))
+table.insert(themeObjects,{type="toggle",obj=btn,state=function() return st end})
 end
-
 local function Btn(parent,text,cb)
-    local b=Instance.new("TextButton",parent)
-    b.Size=UDim2.new(1,0,0,28)
-    b.BackgroundColor3=Theme.Panel
-    b.Text=text
-    b.TextColor3=Theme.Text
-    b.Font=Enum.Font.Gotham
-    b.TextSize=12
-    Instance.new("UICorner",b).CornerRadius=UDim.new(0,6)
-    b.MouseButton1Click:Connect(cb)
+local b=Instance.new("TextButton",parent)
+b.Size=UDim2.new(1,0,0,28)
+b.BackgroundColor3=Theme.Panel
+b.Text=text
+b.TextColor3=Theme.Text
+b.Font=Enum.Font.Gotham
+b.TextSize=12
+Instance.new("UICorner",b).CornerRadius=UDim.new(0,6)
+AddConn(b.MouseButton1Click:Connect(cb))
 end
-
+local function Slider(parent,text,min,max,def,cb)
+local f=Instance.new("Frame",parent)
+f.Size=UDim2.new(1,0,0,45)
+f.BackgroundColor3=Theme.Panel
+Instance.new("UICorner",f).CornerRadius=UDim.new(0,6)
+local l=Instance.new("TextLabel",f)
+l.Size=UDim2.new(1,-20,0,15)
+l.Position=UDim2.fromOffset(10,5)
+l.BackgroundTransparency=1
+l.Text=text..": "..def
+l.TextColor3=Theme.Text
+l.Font=Enum.Font.Gotham
+l.TextSize=11
+l.TextXAlignment=Enum.TextXAlignment.Left
+local bg=Instance.new("Frame",f)
+bg.Size=UDim2.new(1,-20,0,6)
+bg.Position=UDim2.fromOffset(10,28)
+bg.BackgroundColor3=Theme.Off
+Instance.new("UICorner",bg).CornerRadius=UDim.new(1,0)
+local fill=Instance.new("Frame",bg)
+fill.Size=UDim2.new((def-min)/(max-min),0,1,0)
+fill.BackgroundColor3=Theme.Accent
+Instance.new("UICorner",fill).CornerRadius=UDim.new(1,0)
+local knob=Instance.new("Frame",bg)
+knob.Size=UDim2.fromOffset(12,12)
+knob.Position=UDim2.new((def-min)/(max-min),-6,0.5,-6)
+knob.BackgroundColor3=Theme.Text
+Instance.new("UICorner",knob).CornerRadius=UDim.new(1,0)
+local dr=false
+local function upd(input)
+local p=math.clamp((input.Position.X-bg.AbsolutePosition.X)/bg.AbsoluteSize.X,0,1)
+fill.Size=UDim2.new(p,0,1,0)
+knob.Position=UDim2.new(p,-6,0.5,-6)
+local v=math.floor(min+(p*(max-min)))
+l.Text=text..": "..v
+cb(v)
+end
+AddConn(bg.InputBegan:Connect(function(input) if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then dr=true;upd(input) end end))
+AddConn(UserInputService.InputChanged:Connect(function(input) if dr and (input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch) then upd(input) end end))
+AddConn(UserInputService.InputEnded:Connect(function(input) if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then dr=false end end))
+table.insert(themeObjects,{type="slider",fill=fill,bg=bg})
+end
+local function Dropdown(parent,text,options,cb)
+local f=Instance.new("Frame",parent)
+f.Size=UDim2.new(1,0,0,30)
+f.BackgroundColor3=Theme.Panel
+Instance.new("UICorner",f).CornerRadius=UDim.new(0,6)
+local l=Instance.new("TextLabel",f)
+l.Size=UDim2.new(1,-190,1,0)
+l.Position=UDim2.fromOffset(10,0)
+l.BackgroundTransparency=1
+l.Text=text
+l.TextColor3=Theme.Text
+l.Font=Enum.Font.Gotham
+l.TextSize=12
+l.TextXAlignment=Enum.TextXAlignment.Left
+local btn=Instance.new("TextButton",f)
+btn.Size=UDim2.fromOffset(170,20)
+btn.Position=UDim2.new(1,-180,0.5,-10)
+btn.BackgroundColor3=Theme.Off
+btn.Text="Select"
+btn.TextColor3=Theme.Text
+btn.Font=Enum.Font.Gotham
+btn.TextSize=11
+Instance.new("UICorner",btn).CornerRadius=UDim.new(0,4)
+local open=false
+local menu=Instance.new("Frame",gui)
+menu.Size=UDim2.fromOffset(170,math.min(#options*20,150))
+menu.BackgroundColor3=Theme.Bg
+menu.Visible=false
+menu.ZIndex=999
+Instance.new("UICorner",menu).CornerRadius=UDim.new(0,4)
+local stroke2=Instance.new("UIStroke",menu)
+stroke2.Color=Theme.Accent
+local scroll=Instance.new("ScrollingFrame",menu)
+scroll.Size=UDim2.fromScale(1,1)
+scroll.BackgroundTransparency=1
+scroll.ScrollBarThickness=2
+scroll.CanvasSize=UDim2.fromOffset(0,#options*20)
+local ml=Instance.new("UIListLayout",scroll)
+for i,opt in ipairs(options) do
+local ob=Instance.new("TextButton",scroll)
+ob.Size=UDim2.new(1,0,0,20)
+ob.BackgroundTransparency=1
+ob.Text=opt
+ob.TextColor3=Theme.Text
+ob.Font=Enum.Font.Gotham
+ob.TextSize=10
+ob.ZIndex=1000
+AddConn(ob.MouseButton1Click:Connect(function() btn.Text=opt menu.Visible=false open=false cb(opt) end))
+end
+AddConn(btn.MouseButton1Click:Connect(function() open=not open if open then menu.Position=UDim2.fromOffset(btn.AbsolutePosition.X,btn.AbsolutePosition.Y+btn.AbsoluteSize.Y) menu.Visible=true else menu.Visible=false end end))
+table.insert(themeObjects,{type="dropdown",btn=btn,menu=menu,stroke=stroke2})
+end
+AddConn(LP.CharacterRemoving:Connect(function() if currentTween then currentTween:Cancel() end FlyToken=FlyToken+1 end))
 local function FlyTo(CF)
-    local ch=LP.Character
-    if not ch or not ch:FindFirstChild("HumanoidRootPart") then return end
-    local hrp=ch.HumanoidRootPart
-    local bv=Instance.new("BodyVelocity")
-    bv.MaxForce=Vector3.new(math.huge,math.huge,math.huge)
-    bv.Parent=hrp
-    local st=hrp.Position
-    local en=CF.Position
-    local dist=(en-st).Magnitude
-    bv.Velocity=(en-st).Unit*(dist/1.5)
-    task.wait(1.5)
-    if bv then bv:Destroy() end
-    hrp.CFrame=CF
+local ch=LP.Character
+if not ch or not ch:FindFirstChild("HumanoidRootPart") then return end
+local hrp=ch.HumanoidRootPart
+FlyToken=FlyToken+1
+local myToken=FlyToken
+if currentTween then currentTween:Cancel() end
+local tweenInfo=TweenInfo.new(2.5,Enum.EasingStyle.Linear)
+currentTween=TweenService:Create(hrp,tweenInfo,{CFrame=CF})
+currentTween:Play()
+local conn
+conn=currentTween.Completed:Connect(function() if myToken==FlyToken then currentTween=nil end conn:Disconnect() end)
 end
-
 Tog(pages["Farm"],"Auto Farm",false,function(v) States.AutoFarm=v end)
 Tog(pages["Farm"],"Auto Quests",false,function(v) States.AutoQuests=v end)
-Btn(pages["Farm"],"Range: 30",function() Config.FarmRange=30 end)
-Btn(pages["Farm"],"Range: 50",function() Config.FarmRange=50 end)
-
+Slider(pages["Farm"],"Farm Range",10,150,30,function(v) Config.FarmRange=v end)
+local allQuests={}
+for npcName,_ in pairs(Quests) do table.insert(allQuests,npcName) end
+table.sort(allQuests)
+Dropdown(pages["Farm"],"Target NPC",allQuests,function(opt) Config.TargetNPC=opt end)
 for sea,locs in pairs(Locs) do
-    local lbl=Instance.new("TextLabel",pages["TP"])
-    lbl.Size=UDim2.new(1,0,0,20)
-    lbl.BackgroundTransparency=1
-    lbl.Text=sea
-    lbl.TextColor3=Theme.Accent
-    lbl.Font=Enum.Font.GothamBold
-    lbl.TextSize=11
-    lbl.TextXAlignment=Enum.TextXAlignment.Left
-    for name,cf in pairs(locs) do Btn(pages["TP"],name,function() FlyTo(cf) end) end
+local lbl=Instance.new("TextLabel",pages["TP"])
+lbl.Size=UDim2.new(1,0,0,20)
+lbl.BackgroundTransparency=1
+lbl.Text=sea
+lbl.TextColor3=Theme.Accent
+lbl.Font=Enum.Font.GothamBold
+lbl.TextSize=11
+lbl.TextXAlignment=Enum.TextXAlignment.Left
+for name,cf in pairs(locs) do Btn(pages["TP"],name,function() FlyTo(cf) end) end
 end
-
-Tog(pages["Misc"],"Fullbright",false,function(v)
-    if v then Lighting.Ambient=Color3.fromRGB(255,255,255);Lighting.OutdoorAmbient=Color3.fromRGB(255,255,255);Lighting.Brightness=2
-    else Lighting.Ambient=Color3.fromRGB(70,70,70);Lighting.OutdoorAmbient=Color3.fromRGB(128,128,128);Lighting.Brightness=1 end
-end)
+Tog(pages["Misc"],"Fullbright",false,function(v) Config.Fullbright=v if v then Lighting.Ambient=Color3.fromRGB(255,255,255) Lighting.OutdoorAmbient=Color3.fromRGB(255,255,255) Lighting.Brightness=2 else Lighting.Ambient=origAmbient Lighting.OutdoorAmbient=origOutdoor Lighting.Brightness=origBrightness end end)
 Tog(pages["Misc"],"Anti-AFK",false,function(v) States.AntiAFK=v end)
-
-Btn(pages["Cfg"],"Cycle Colors",function()
-    cIdx=cIdx+1
-    if cIdx>#Colors then cIdx=1 end
-    local nc=Colors[cIdx].Color
-    stroke.Color=nc
-    Theme.Accent=nc
-    for n,b in pairs(tabBtns) do if b.BackgroundColor3==Theme.Accent then b.BackgroundColor3=nc end end
-end)
-
-for n,b in pairs(tabBtns) do
-    b.BackgroundColor3=n=="Farm" and Theme.Accent or Theme.Panel
-    b.TextColor3=n=="Farm" and Theme.Text or Theme.Muted
+local function UpdateTheme()
+stroke.Color=Theme.Accent
+openBtn.BackgroundColor3=Theme.Accent
+for _,data in ipairs(themeObjects) do
+if data.type=="tab" then
+if data.obj.BackgroundColor3~=Theme.Panel then data.obj.BackgroundColor3=Theme.Accent end
+elseif data.type=="toggle" then
+if data.state() then data.obj.BackgroundColor3=Theme.Accent end
+elseif data.type=="slider" then
+data.fill.BackgroundColor3=Theme.Accent
+elseif data.type=="dropdown" then
+data.stroke.Color=Theme.Accent
 end
+end
+end
+Btn(pages["Cfg"],"Cycle Colors",function() cIdx=cIdx+1 if cIdx>#Colors then cIdx=1 end Theme.Accent=Colors[cIdx].Color UpdateTheme() end)
+for n,b in pairs(tabBtns) do b.BackgroundColor3=n=="Farm" and Theme.Accent or Theme.Panel b.TextColor3=n=="Farm" and Theme.Text or Theme.Muted end
 pages["Farm"].Visible=true
-
-LP.Idled:Connect(function() if States.AntiAFK then VirtualUser:CaptureController();VirtualUser:ClickButton2(Vector2.new()) end end)
-
-task.spawn(function()
-    while task.wait(2) do
-        if States.AutoQuests then
-            local ch=LP.Character
-            if ch and ch:FindFirstChild("HumanoidRootPart") then
-                local cl,dist=nil,math.huge
-                for _,v in pairs(workspace:GetChildren()) do
-                    if v:IsA("Model") and v:FindFirstChild("HumanoidRootPart") then
-                        -- Check exact name or name with trailing space
-                        local cleanName = string.gsub(v.Name, "%s+$", "")
-                        if Quests[cleanName] then
-                            local d=(ch.HumanoidRootPart.Position-v.HumanoidRootPart.Position).Magnitude
-                            if d<dist then dist=d;cl=v end
-                        end
-                    end
-                end
-                if cl then
-                    FlyTo(cl.HumanoidRootPart.CFrame*CFrame.new(0,0,3))
-                    task.wait(0.5)
-                    pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest",cl.Name) end)
-                    task.wait(1.5)
-                end
-            end
-        end
-    end
-end)
-
-RunService.Heartbeat:Connect(function()
-    if not States.AutoFarm then return end
-    local ch=LP.Character
-    if not ch or not ch:FindFirstChild("HumanoidRootPart") then return end
-    local cl,dist=nil,math.huge
-    local en=workspace:FindFirstChild("Enemies")
-    if en then
-        for _,v in pairs(en:GetChildren()) do
-            if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health>0 then
-                local d=(ch.HumanoidRootPart.Position-v.HumanoidRootPart.Position).Magnitude
-                if d<dist and d<=Config.FarmRange then dist=d;cl=v end
-            end
-        end
-    end
-    if cl and dist>5 then FlyTo(cl.HumanoidRootPart.CFrame*CFrame.new(0,0,3)) end
-end)
-print("NOVAHUB Loaded.")
+AddConn(LP.Idled:Connect(function() if States.AntiAFK then VirtualUser:CaptureController();VirtualUser:ClickButton2(Vector2.new()) end end))
+task.spawn(function() while task.wait(5) do if not IsRunning then break end local temp={} for _,v in pairs(workspace:GetDescendants()) do if v:IsA("Model") and v:FindFirstChild("HumanoidRootPart") then local cleanName=string.gsub(v.Name,"%s+$","") if Quests[cleanName] then table.insert(temp,{model=v,name=cleanName}) end end end cachedNPCs=temp end end)
+task.spawn(function() while task.wait(2) do if not IsRunning then break end if States.AutoQuests then local ch=LP.Character if ch and ch:FindFirstChild("HumanoidRootPart") then local cl,dist=nil,math.huge local target=Config.TargetNPC for _,data in ipairs(cachedNPCs) do if target=="None" or data.name==target then if data.model:FindFirstChild("HumanoidRootPart") then local d=(ch.HumanoidRootPart.Position-data.model.HumanoidRootPart.Position).Magnitude if d<dist then dist=d;cl=data.model end end end end if cl then FlyTo(cl.HumanoidRootPart.CFrame*CFrame.new(0,0,3)) task.wait(2.5) VirtualUser:CaptureController() VirtualUser:ClickButton1(Vector2.new(workspace.CurrentCamera.ViewportSize.X/2,workspace.CurrentCamera.ViewportSize.Y/2)) task.wait(0.5) VirtualUser:CaptureController() VirtualUser:ClickButton1(Vector2.new(workspace.CurrentCamera.ViewportSize.X/2,workspace.CurrentCamera.ViewportSize.Y/2)) task.wait(1.5) end end end end end)
+task.spawn(function() while task.wait(0.5) do if not IsRunning then break end if States.AutoFarm then local ch=LP.Character if ch and ch:FindFirstChild("HumanoidRootPart") then local cl,dist=nil,math.huge local en=workspace:FindFirstChild("Enemies") if en then for _,v in pairs(en:GetChildren()) do if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health>0 then local d=(ch.HumanoidRootPart.Position-v.HumanoidRootPart.Position).Magnitude if d<dist and d<=Config.FarmRange then dist=d;cl=v end end end end if cl and dist>5 then FlyTo(cl.HumanoidRootPart.CFrame*CFrame.new(0,0,3)) end end end end end)
+print("NOVAHUB V9 Loaded.")
