@@ -8,8 +8,8 @@ local Lighting=game:GetService("Lighting")
 local LP=Players.LocalPlayer
 
 if CoreGui:FindFirstChild("NOVAHUB") then CoreGui.NOVAHUB:Destroy() end
-local States={AutoFarm=false,FastAttack=false,AntiAFK=false}
-local Config={FarmRange=30,AttackSpeed=0.1}
+local States={AutoFarm=false,AutoClicker=false,KillAura=false,AntiAFK=false}
+local Config={FarmRange=30,ClickDelay=0.1,AuraRange=30}
 local Theme={Bg=Color3.fromRGB(24,24,27),SidebarBg=Color3.fromRGB(18,18,20),PanelBg=Color3.fromRGB(33,33,36),Accent=Color3.fromRGB(138,43,226),Text=Color3.fromRGB(240,240,240),SubText=Color3.fromRGB(170,170,170),ToggleOff=Color3.fromRGB(75,75,80)}
 local FontList={Enum.Font.Gotham,Enum.Font.SourceSans,Enum.Font.Arial}
 local ColorList={Color3.fromRGB(138,43,226),Color3.fromRGB(0,150,255),Color3.fromRGB(255,50,50),Color3.fromRGB(50,255,50)}
@@ -307,8 +307,10 @@ AiLbl.TextXAlignment=Enum.TextXAlignment.Left
 MakeToggle(Pages["Farming"],"Auto Farm (TP + Hit)",40,false,function(s) States.AutoFarm=s end)
 MakeSlider(Pages["Farming"],"Farm Range",80,10,150,30,function(v) Config.FarmRange=v end)
 
-MakeToggle(Pages["Combat"],"Fast Attack",40,false,function(s) States.FastAttack=s end)
-MakeSlider(Pages["Combat"],"Attack Speed (x100)",80,1,50,10,function(v) Config.AttackSpeed=v/100 end)
+MakeToggle(Pages["Combat"],"Auto Clicker",40,false,function(s) States.AutoClicker=s end)
+MakeSlider(Pages["Combat"],"Click Speed (x100)",80,1,50,10,function(v) Config.ClickDelay=v/100 end)
+MakeToggle(Pages["Combat"],"Kill Aura",130,false,function(s) States.KillAura=s end)
+MakeSlider(Pages["Combat"],"Aura Range",170,10,100,30,function(v) Config.AuraRange=v end)
 
 local Teleport=Pages["Teleport"]
 MakeSection(Teleport,"First Sea",0)
@@ -349,43 +351,50 @@ Pages["Home"].Visible=true
 
 LP.Idled:Connect(function() if States.AntiAFK then VirtualUser:CaptureController();VirtualUser:ClickButton2(Vector2.new()) end end)
 
-local function Attack()
-    local char=LP.Character
-    if not char then return end
-    local tool=char:FindFirstChildOfClass("Tool")
-    if tool then
-        pcall(function() tool:Activate() end)
-    else
-        pcall(function()
-            VirtualUser:CaptureController()
-            VirtualUser:ClickButton1(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
-        end)
-    end
+local function Click()
+    pcall(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton1(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+    end)
 end
 
 task.spawn(function()
-    while task.wait(Config.AttackSpeed) do
-        if States.FastAttack then Attack() end
+    while task.wait(Config.ClickDelay) do
+        if States.AutoClicker then Click() end
     end
 end)
 
 RunService.Heartbeat:Connect(function()
-    if not States.AutoFarm then return end
     local ch=LP.Character
     if not ch or not ch:FindFirstChild("HumanoidRootPart") then return end
-    local closest,shortest=nil,math.huge
-    local en=workspace:FindFirstChild("Enemies")
-    if en then
-        for _,v in pairs(en:GetChildren()) do
-            if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health>0 then
-                local d=(ch.HumanoidRootPart.Position-v.HumanoidRootPart.Position).Magnitude
-                if d<shortest and d<=Config.FarmRange then shortest=d;closest=v end
+    
+    if States.KillAura then
+        local en=workspace:FindFirstChild("Enemies")
+        if en then
+            for _,v in pairs(en:GetChildren()) do
+                if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health>0 then
+                    local d=(ch.HumanoidRootPart.Position-v.HumanoidRootPart.Position).Magnitude
+                    if d<=Config.AuraRange then Click() end
+                end
             end
         end
     end
-    if closest then
-        if shortest>5 then ch.HumanoidRootPart.CFrame=closest.HumanoidRootPart.CFrame*CFrame.new(0,0,3) end
-        Attack()
+
+    if States.AutoFarm then
+        local closest,shortest=nil,math.huge
+        local en=workspace:FindFirstChild("Enemies")
+        if en then
+            for _,v in pairs(en:GetChildren()) do
+                if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health>0 then
+                    local d=(ch.HumanoidRootPart.Position-v.HumanoidRootPart.Position).Magnitude
+                    if d<shortest and d<=Config.FarmRange then shortest=d;closest=v end
+                end
+            end
+        end
+        if closest then
+            if shortest>5 then ch.HumanoidRootPart.CFrame=closest.HumanoidRootPart.CFrame*CFrame.new(0,0,3) end
+            Click()
+        end
     end
 end)
 print("NOVAHUB Loaded.")
