@@ -1,8 +1,9 @@
--- NOVAHUB: Phase 1.5 (Smaller UI + Minimize Toggle)
+-- NOVAHUB: Phase 1.5 (Full UI + Config + Anti-AFK)
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
+local VirtualUser = game:GetService("VirtualUser")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -10,16 +11,29 @@ local LocalPlayer = Players.LocalPlayer
 local oldGui = CoreGui:FindFirstChild("NOVAHUB")
 if oldGui then oldGui:Destroy() end
 
--- Theme
+-- Theme Setup
 local Theme = {
     Bg = Color3.fromRGB(24, 24, 27),
     SidebarBg = Color3.fromRGB(18, 18, 20),
     PanelBg = Color3.fromRGB(33, 33, 36),
-    Accent = Color3.fromRGB(138, 43, 226),
+    Accent = Color3.fromRGB(138, 43, 226), -- Purple
     Text = Color3.fromRGB(240, 240, 240),
     SubText = Color3.fromRGB(170, 170, 170),
     ToggleOff = Color3.fromRGB(75, 75, 80),
 }
+
+local FontList = {Enum.Font.Gotham, Enum.Font.SourceSans, Enum.Font.Arial}
+local ColorList = {
+    {Name = "Purple", Color = Color3.fromRGB(138, 43, 226)},
+    {Name = "Blue", Color = Color3.fromRGB(0, 150, 255)},
+    {Name = "Red", Color = Color3.fromRGB(255, 50, 50)},
+    {Name = "Green", Color = Color3.fromRGB(50, 255, 50)},
+    {Name = "Yellow", Color = Color3.fromRGB(255, 255, 0)}
+}
+local currentFontIndex = 1
+local currentColorIndex = 1
+
+local States = { AntiAFK = false }
 
 -- 1. Main GUI
 local ScreenGui = Instance.new("ScreenGui")
@@ -27,7 +41,6 @@ ScreenGui.Name = "NOVAHUB"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = CoreGui
 
--- Minimize Button (N)
 local OpenBtn = Instance.new("TextButton", ScreenGui)
 OpenBtn.Size = UDim2.new(0, 40, 0, 40)
 OpenBtn.Position = UDim2.new(0, 20, 0.5, -20)
@@ -43,7 +56,6 @@ local openStroke = Instance.new("UIStroke", OpenBtn)
 openStroke.Color = Theme.Text
 openStroke.Thickness = 1.5
 
--- Main Window (Smaller: 500x300)
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Size = UDim2.new(0, 500, 0, 300)
 MainFrame.Position = UDim2.new(0.5, -250, 0.5, -150)
@@ -57,7 +69,7 @@ local Stroke = Instance.new("UIStroke", MainFrame)
 Stroke.Color = Theme.Accent
 Stroke.Thickness = 1.5
 
--- Window Dragging
+-- Dragging
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -120,17 +132,10 @@ CloseBtn.Text = "✕"
 CloseBtn.TextColor3 = Theme.Accent
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.TextSize = 14
-CloseBtn.MouseButton1Click:Connect(function() 
-    MainFrame.Visible = false
-    OpenBtn.Visible = true
-end)
+CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false; OpenBtn.Visible = true end)
+OpenBtn.MouseButton1Click:Connect(function() MainFrame.Visible = true; OpenBtn.Visible = false end)
 
-OpenBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = true
-    OpenBtn.Visible = false
-end)
-
--- 3. Sidebar (Scaled down)
+-- 3. Sidebar & Content Area
 local Sidebar = Instance.new("Frame", MainFrame)
 Sidebar.Size = UDim2.new(0, 130, 1, -35)
 Sidebar.Position = UDim2.new(0, 0, 0, 35)
@@ -143,7 +148,7 @@ ContentArea.Position = UDim2.new(0, 130, 0, 35)
 ContentArea.BackgroundTransparency = 1
 
 -- 4. Tabs
-local Tabs = {"Home", "Farming", "Combat", "Teleport", "Shop", "Misc", "Settings"}
+local Tabs = {"Home", "Farming", "Combat", "Teleport", "Shop", "Misc", "Config"}
 local TabIcons = {"⌂", "⚙", "⚔", "💎", "👕", "★", "⚙"}
 local TabButtons = {}
 local Pages = {}
@@ -181,7 +186,8 @@ local function createSidebarTab(name, iconText, yPos)
     page.Size = UDim2.new(1, -20, 1, -15)
     page.Position = UDim2.new(0, 10, 0, 5)
     page.BackgroundTransparency = 1
-    page.ScrollBarThickness = 0
+    page.ScrollBarThickness = 2
+    page.ScrollBarImageColor3 = Theme.Accent
     page.Visible = false
     page.Name = name
     page.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -207,7 +213,7 @@ for i, tabName in ipairs(Tabs) do
     createSidebarTab(tabName, TabIcons[i], (i - 1) * 35 + 5)
 end
 
--- 5. UI Elements (Scaled)
+-- 5. UI Elements
 local function createSection(parent, title, yPos)
     local frame = Instance.new("Frame", parent)
     frame.Size = UDim2.new(1, -10, 0, 35)
@@ -334,7 +340,20 @@ local function createDropdown(parent, text, options, yPos, callback)
     end)
 end
 
--- 6. Content
+local function createButton(parent, text, yPos, callback)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.new(1, -20, 0, 30)
+    btn.Position = UDim2.new(0, 5, 0, yPos)
+    btn.BackgroundColor3 = Theme.PanelBg
+    btn.Text = text
+    btn.TextColor3 = Theme.Text
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 12
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+    btn.MouseButton1Click:Connect(callback)
+end
+
+-- 6. Build Pages
 local Home = Pages["Home"]
 createSection(Home, "Welcome!", 0)
 local welcomeDesc = Instance.new("TextLabel", Home)
@@ -361,19 +380,63 @@ createToggle(Combat, "Auto Gun", 120, false, function(s) print("Auto Gun:", s) e
 
 local Teleport = Pages["Teleport"]
 createSection(Teleport, "Teleport", 0)
+createButton(Teleport, "Teleport to Cursed Ship", 40, function() print("TP Cursed Ship") end)
+createButton(Teleport, "Teleport to Castle", 80, function() print("TP Castle") end)
+createButton(Teleport, "Teleport to Main Island", 120, function() print("TP Main") end)
 
 local Shop = Pages["Shop"]
 createSection(Shop, "Shop", 0)
+createToggle(Shop, "Auto Buy Haki", 40, false, function(s) print("Auto Haki:", s) end)
+createToggle(Shop, "Auto Buy Sword", 80, false, function(s) print("Auto Sword:", s) end)
 
 local Misc = Pages["Misc"]
 createSection(Misc, "Misc", 0)
+createToggle(Misc, "Anti-AFK", 40, false, function(s) States.AntiAFK = s end)
+createToggle(Misc, "Fullbright", 80, false, function(s) print("Fullbright:", s) end)
 
-local Settings = Pages["Settings"]
-createSection(Settings, "Settings", 0)
-createToggle(Settings, "Auto Stats", 40, false, function(s) print("Auto Stats:", s) end)
+local Config = Pages["Config"]
+createSection(Config, "UI Config", 0)
+createButton(Config, "Change Accent Color", 40, function()
+    currentColorIndex = currentColorIndex + 1
+    if currentColorIndex > #ColorList then currentColorIndex = 1 end
+    local newColor = ColorList[currentColorIndex].Color
+    Stroke.Color = newColor
+    Crown.TextColor3 = newColor
+    SubTitle.TextColor3 = newColor
+    CloseBtn.TextColor3 = newColor
+    openStroke.Color = newColor
+    OpenBtn.BackgroundColor3 = newColor
+    -- Update all active tab highlights
+    for _, b in pairs(TabButtons) do
+        if b.BackgroundTransparency == 0 then
+            b:GetChildren()[2].TextColor3 = newColor
+        end
+        b:GetChildren()[1].TextColor3 = newColor -- Icon
+    end
+    print("Color changed to:", ColorList[currentColorIndex].Name)
+end)
+createButton(Config, "Change Font Style", 80, function()
+    currentFontIndex = currentFontIndex + 1
+    if currentFontIndex > #FontList then currentFontIndex = 1 end
+    local newFont = FontList[currentFontIndex]
+    Title.Font = newFont
+    SubTitle.Font = newFont
+    welcomeDesc.Font = newFont
+    -- Update all text in all pages
+    for _, p in pairs(Pages) do
+        for _, obj in pairs(p:GetDescendants()) do
+            if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+                obj.Font = newFont
+            end
+        end
+    end
+    print("Font changed.")
+end)
+createToggle(Config, "Anti-AFK", 120, false, function(s) States.AntiAFK = s end)
 
+-- Auto-size canvas
 for _, page in pairs(Pages) do
-    page.CanvasSize = UDim2.new(0, 0, 0, #page:GetChildren() * 45 + 30)
+    page.CanvasSize = UDim2.new(0, 0, 0, #page:GetChildren() * 45 + 50)
 end
 
 -- Initial Tab
@@ -381,5 +444,14 @@ TabButtons[1].BackgroundTransparency = 0
 TabButtons[1].BackgroundColor3 = Theme.PanelBg
 TabButtons[1]:GetChildren()[2].TextColor3 = Theme.Accent
 Pages["Home"].Visible = true
+
+-- 7. Anti-AFK Logic
+LocalPlayer.Idled:Connect(function()
+    if States.AntiAFK then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+        print("Anti-AFK triggered.")
+    end
+end)
 
 print("NOVAHUB Phase 1.5 Loaded.")
