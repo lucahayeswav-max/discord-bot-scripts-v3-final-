@@ -168,58 +168,35 @@ task.spawn(function()
                 end
                 if VirtualUser then
                     VirtualUser:CaptureController()
-                    VirtualUser:ClickButton1(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                    VirtualUser:ClickButton1(Vector2.new(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2), workspace.CurrentCamera.CFrame)
                 end
             end
         end
     end
 end)
 
--- COMBAT LOGIC (FIXED EQUIP & SWING)
+-- COMBAT LOGIC (BARE FISTS FIX)
 local autoAttack = false
 local fastAttackSpeed = 0.1
-local equippedTool = nil
 
 local cmb=UILib.MakeSection(pgs["Combat"],"Combat Settings",0,0,600,250)
-UILib.MakeToggle(cmb,"Auto Attack",40,function(v) autoAttack = v end)
+UILib.MakeToggle(cmb,"Auto Attack (Fists)",40,function(v) autoAttack = v end)
 UILib.MakeSlider(cmb,"Fast Attack Speed",80,1,50,10,function(v) fastAttackSpeed = v / 100 end)
-UILib.MakeToggle(cmb,"Hitbox Expander",130,function() end)
-UILib.MakeToggle(cmb,"Auto Parry",170,function() end)
-
-local function forceEquip()
-    local ch = LP.Character
-    if not ch then return end
-    local tool = ch:FindFirstChildOfClass("Tool")
-    if not tool then
-        local bp = LP:FindFirstChild("Backpack")
-        if bp then
-            for _, v in pairs(bp:GetChildren()) do
-                if v:IsA("Tool") then
-                    -- Equip the first tool found
-                    local hrp = ch:FindFirstChild("Humanoid")
-                    if hrp then
-                        hrp:EquipTool(v)
-                    end
-                    break
-                end
-            end
-        end
-    end
-end
+UILib.MakeToggle(cmb,"Kill Aura",130,function() end)
+UILib.MakeToggle(cmb,"Hitbox Expander",170,function() end)
 
 task.spawn(function()
     while task.wait(fastAttackSpeed) do
         if autoAttack then
-            forceEquip()
             local ch = LP.Character
             if ch then
                 local tool = ch:FindFirstChildOfClass("Tool")
                 if tool then
-                    tool:Activate()
+                    pcall(function() tool:Activate() end)
                 else
                     if VirtualUser then
                         VirtualUser:CaptureController()
-                        VirtualUser:ClickButton1(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                        VirtualUser:ClickButton1(Vector2.new(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2), workspace.CurrentCamera.CFrame)
                     end
                 end
             end
@@ -279,4 +256,4 @@ local bRgt=Instance.new("TextLabel",bot); bRgt.Size=UDim2.fromOffset(200,20); bR
 
 for n,b in pairs(tBts) do b.BackgroundColor3=n=="Home" and Theme.Accent or Theme.Panel b.TextColor3=n=="Home" and Theme.Text or Theme.Muted end
 pgs["Home"].Visible=true
-print("NOVAHUB Loaded with Force Equip.")
+print("NOVAHUB Loaded with Bare Fists Fix.")
