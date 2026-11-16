@@ -8,7 +8,7 @@ if CoreGui:FindFirstChild("NOVAHUB") then CoreGui.NOVAHUB:Destroy() end
 
 local Theme={Bg=Color3.fromRGB(15,12,20),Panel=Color3.fromRGB(24,20,30),Accent=Color3.fromRGB(145,75,255),Text=Color3.fromRGB(255,255,255),Muted=Color3.fromRGB(150,150,160),Off=Color3.fromRGB(60,50,70),Border=Color3.fromRGB(70,40,100)}
 local States={AutoFarm=false,KillAura=false,ESP=false,FastAttack=false,AutoParry=false,AutoDodge=false,Hitbox=false, FruitESP=false, PlayerESP=false, InfJump=false}
-local Config={WalkSpeed=16}
+local Config={WalkSpeed=16, FarmRange=50, AttackSpeed=0.1}
 local Connections={}
 local function AddConn(c) table.insert(Connections,c) end
 
@@ -23,21 +23,17 @@ loadingGui.Size=UDim2.fromScale(1,1)
 loadingGui.BackgroundColor3=Color3.fromRGB(10,5,15)
 loadingGui.BorderSizePixel=0
 loadingGui.ZIndex=100
-
 local bigText=Instance.new("TextLabel",loadingGui)
 bigText.Size=UDim2.new(1,0,0,100); bigText.Position=UDim2.new(0,0,0.3,0)
 bigText.BackgroundTransparency=1; bigText.Text="NOVAHUB"; bigText.TextColor3=Theme.Text
 bigText.Font=Enum.Font.GothamBlack; bigText.TextSize=90
-
 local barBg=Instance.new("Frame",loadingGui)
 barBg.Size=UDim2.new(0,600,0,10); barBg.Position=UDim2.new(0.5,-300,0.65,0)
 barBg.BackgroundColor3=Color3.fromRGB(30,30,40)
 Instance.new("UICorner",barBg).CornerRadius=UDim.new(1,0)
-
 local barFill=Instance.new("Frame",barBg)
 barFill.Size=UDim2.new(0,0,1,0); barFill.BackgroundColor3=Theme.Accent
 Instance.new("UICorner",barFill).CornerRadius=UDim.new(1,0)
-
 local progress=0
 task.spawn(function()
     while progress<100 do
@@ -189,25 +185,25 @@ local function MakeToggle(parent,text,y,cb)
     end))
 end
 
-local function MakeSlider(parent,text,y,cb)
+local function MakeSlider(parent,text,y,min,max,def,cb)
     local f=Instance.new("Frame",parent)
     f.Size=UDim2.new(1,-30,0,40); f.Position=UDim2.fromOffset(15,y); f.BackgroundTransparency=1
     local l=Instance.new("TextLabel",f)
-    l.Size=UDim2.new(1,0,0,20); l.BackgroundTransparency=1; l.Text=text..": 16"; l.TextColor3=Theme.Text; l.Font=Enum.Font.Gotham; l.TextSize=12; l.TextXAlignment=Enum.TextXAlignment.Left
+    l.Size=UDim2.new(1,0,0,20); l.BackgroundTransparency=1; l.Text=text..": "..def; l.TextColor3=Theme.Text; l.Font=Enum.Font.Gotham; l.TextSize=12; l.TextXAlignment=Enum.TextXAlignment.Left
     local bg=Instance.new("Frame",f)
     bg.Size=UDim2.new(1,0,0,4); bg.Position=UDim2.fromOffset(0,25); bg.BackgroundColor3=Theme.Off
     Instance.new("UICorner",bg).CornerRadius=UDim.new(1,0)
     local fill=Instance.new("Frame",bg)
-    fill.Size=UDim2.new(0.2,0,1,0); fill.BackgroundColor3=Theme.Accent
+    fill.Size=UDim2.new((def-min)/(max-min),0,1,0); fill.BackgroundColor3=Theme.Accent
     Instance.new("UICorner",fill).CornerRadius=UDim.new(1,0)
     local knob=Instance.new("Frame",bg)
-    knob.Size=UDim2.fromOffset(12,12); knob.Position=UDim2.new(0.2,-6,0.5,-6); knob.BackgroundColor3=Theme.Text
+    knob.Size=UDim2.fromOffset(12,12); knob.Position=UDim2.new((def-min)/(max-min),-6,0.5,-6); knob.BackgroundColor3=Theme.Text
     Instance.new("UICorner",knob).CornerRadius=UDim.new(1,0)
     local dr=false
     local function upd(i)
         local p=math.clamp((i.Position.X-bg.AbsolutePosition.X)/bg.AbsoluteSize.X,0,1)
         fill.Size=UDim2.new(p,0,1,0); knob.Position=UDim2.new(p,-6,0.5,-6)
-        local v=math.floor(16+(p*184)); l.Text=text..": "..v; cb(v)
+        local v=math.floor(min+(p*(max-min))); l.Text=text..": "..v; cb(v)
     end
     AddConn(bg.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dr=true;upd(i) end end))
     AddConn(UserInputService.InputChanged:Connect(function(i) if dr and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then upd(i) end end))
@@ -229,7 +225,6 @@ bTitle.Text="Welcome to NOVAHUB!"; bTitle.TextColor3=Theme.Text; bTitle.Font=Enu
 local bSub=Instance.new("TextLabel",banner)
 bSub.Size=UDim2.fromOffset(300,20); bSub.Position=UDim2.fromOffset(20,60); bSub.BackgroundTransparency=1
 bSub.Text="The ultimate script hub for Roblox."; bSub.TextColor3=Theme.Muted; bSub.Font=Enum.Font.Gotham; bSub.TextSize=14; bSub.TextXAlignment=Enum.TextXAlignment.Left
-
 local joinBtn=Instance.new("TextButton",banner)
 joinBtn.Size=UDim2.fromOffset(150,35); joinBtn.Position=UDim2.new(1,-170,1,-50)
 joinBtn.BackgroundColor3=Theme.Accent; joinBtn.Text="Join Our Discord"; joinBtn.TextColor3=Theme.Text; joinBtn.Font=Enum.Font.GothamBold; joinBtn.TextSize=13
@@ -239,25 +234,52 @@ local qa=MakeSection(pages["Home"],"Quick Actions",0,125,290,210)
 MakeToggle(qa,"Fruit ESP",40,function(v) States.FruitESP=v end)
 MakeToggle(qa,"Player ESP",80,function(v) States.PlayerESP=v end)
 MakeToggle(qa,"Infinite Jump",120,function(v) States.InfJump=v end)
-MakeSlider(qa,"Walk Speed",160,function(v) Config.WalkSpeed=v end)
+MakeSlider(qa,"Walk Speed",160,16,200,16,function(v) Config.WalkSpeed=v end)
 
-local frm=MakeSection(pages["Home"],"Farming",305,125,290,210)
-MakeToggle(frm,"Auto Farm",45,function(v) States.AutoFarm=v end)
-MakeSlider(frm,"Farm Range",85,function(v) end)
-MakeSlider(frm,"Attack Speed",130,function(v) end)
+local vis=MakeSection(pages["Home"],"Visuals",305,125,290,210)
+MakeToggle(vis,"ESP",40,function(v) States.ESP=v end)
+MakeToggle(vis,"Names",80,function(v) end)
 
-local vis=MakeSection(pages["Home"],"Visuals",610,125,290,210)
-MakeToggle(vis,"ESP",45,function(v) States.ESP=v end)
-MakeToggle(vis,"Names",85,function(v) end)
+-- FARMING PAGE
+local frm=MakeSection(pages["Farming"],"Farming Settings",0,0,600,250)
+MakeToggle(frm,"Auto Farm",40,function(v) States.AutoFarm=v end)
+MakeSlider(frm,"Farm Range",80,10,200,50,function(v) Config.FarmRange=v end)
+MakeSlider(frm,"Attack Speed",140,1,50,10,function(v) Config.AttackSpeed=v/100 end)
 
-local cmb=MakeSection(pages["Home"],"Combat",0,345,400,100)
-MakeToggle(cmb,"Fast Attack",45,function(v) States.FastAttack=v end)
+-- COMBAT PAGE
+local cmb=MakeSection(pages["Combat"],"Combat Settings",0,0,600,250)
+MakeToggle(cmb,"Fast Attack",40,function(v) States.FastAttack=v end)
 MakeToggle(cmb,"Hitbox Expander",80,function(v) States.Hitbox=v end)
+MakeToggle(cmb,"Auto Parry",120,function(v) end)
+MakeToggle(cmb,"Auto Dodge",160,function(v) end)
 
-local tp=MakeSection(pages["Home"],"Teleport",415,345,180,100)
-MakeBtn(tp,"Spawn",40,function() end)
+-- TELEPORT PAGE
+local tp=MakeSection(pages["Teleport"],"Teleport Locations",0,0,600,250)
+MakeBtn(tp,"Teleport to Spawn",40,function() end)
+MakeBtn(tp,"Teleport to Boss",85,function() end)
+MakeBtn(tp,"Teleport to Quest NPC",130,function() end)
 
-for n,p in pairs(pages) do if n~="Home" then local lbl=Instance.new("TextLabel",p) lbl.Size=UDim2.fromScale(1,1) lbl.BackgroundTransparency=1 lbl.Text=n.." Settings" lbl.TextColor3=Theme.Text lbl.Font=Enum.Font.GothamBold lbl.TextSize=20 end end
+-- CONFIG PAGE
+local cfg=MakeSection(pages["Config"],"UI Settings",0,0,600,250)
+MakeBtn(cfg,"Change UI Color",40,function()
+    Theme.Accent=Color3.fromRGB(math.random(100,255),math.random(50,200),math.random(100,255))
+    stroke.Color=Theme.Accent
+    for _,p in pairs(pages) do
+        for _,v in pairs(p:GetDescendants()) do
+            if v:IsA("TextButton") and v.BackgroundColor3==Color3.fromRGB(145,75,255) then v.BackgroundColor3=Theme.Accent end
+        end
+    end
+end)
+MakeBtn(cfg,"Unload Script",85,function()
+    for _,c in pairs(Connections) do pcall(function() c:Disconnect() end) end
+    gui:Destroy()
+end)
+
+-- CREDITS PAGE
+local cred=MakeSection(pages["Credits"],"Credits",0,0,600,250)
+local cl=Instance.new("TextLabel",cred)
+cl.Size=UDim2.new(1,-30,1,-50); cl.Position=UDim2.fromOffset(15,40); cl.BackgroundTransparency=1
+cl.Text="Made by lucahayeswav-max\nPowered by NOVAHUB\n\nDiscord: lucahayeswav-max"; cl.TextColor3=Theme.Text; cl.Font=Enum.Font.Gotham; cl.TextSize=14; cl.TextXAlignment=Enum.TextXAlignment.Left; cl.TextYAlignment=Enum.TextYAlignment.Top
 
 for n,b in pairs(tabBtns) do b.BackgroundColor3=n=="Home" and Theme.Accent or Theme.Panel b.TextColor3=n=="Home" and Theme.Text or Theme.Muted end
 pages["Home"].Visible=true
