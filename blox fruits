@@ -132,11 +132,10 @@ UILib.MakeToggle(vis,"Names",85,function(v) end)
 UILib.MakeToggle(vis,"Boxes",125,function(v) end)
 UILib.MakeToggle(vis,"Tracers",165,function(v) end)
 
--- FARMING LOGIC
+-- INSTANT SNIPE FARMING
 local farmState = false
 local farmRange = 50
 local attackSpeed = 0.1
-local flyToken = 0
 
 local frm=UILib.MakeSection(pgs["Farming"],"Farming Settings",0,0,600,250)
 UILib.MakeToggle(frm,"Auto Farm",40,function(v) farmState = v end)
@@ -160,27 +159,19 @@ task.spawn(function()
                 end
             end
             if closestEnemy then
-                if shortestDist > 5 then
-                    flyToken = flyToken + 1
-                    local myToken = flyToken
-                    local tween = TweenService:Create(ch.HumanoidRootPart, TweenInfo.new(1, Enum.EasingStyle.Linear), {CFrame = closestEnemy.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)})
-                    tween:Play()
-                end
-                if VirtualUser then
-                    VirtualUser:CaptureController()
-                    VirtualUser:ClickButton1(Vector2.new(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2), workspace.CurrentCamera.CFrame)
-                end
+                -- INSTANT SNIPE (No tween)
+                ch.HumanoidRootPart.CFrame = closestEnemy.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
             end
         end
     end
 end)
 
--- COMBAT LOGIC (BARE FISTS FIX)
+-- COMBAT LOGIC (REMOTE SPAM)
 local autoAttack = false
 local fastAttackSpeed = 0.1
 
 local cmb=UILib.MakeSection(pgs["Combat"],"Combat Settings",0,0,600,250)
-UILib.MakeToggle(cmb,"Auto Attack (Fists)",40,function(v) autoAttack = v end)
+UILib.MakeToggle(cmb,"Auto Attack",40,function(v) autoAttack = v end)
 UILib.MakeSlider(cmb,"Fast Attack Speed",80,1,50,10,function(v) fastAttackSpeed = v / 100 end)
 UILib.MakeToggle(cmb,"Kill Aura",130,function() end)
 UILib.MakeToggle(cmb,"Hitbox Expander",170,function() end)
@@ -194,9 +185,15 @@ task.spawn(function()
                 if tool then
                     pcall(function() tool:Activate() end)
                 else
-                    if VirtualUser then
-                        VirtualUser:CaptureController()
-                        VirtualUser:ClickButton1(Vector2.new(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2), workspace.CurrentCamera.CFrame)
+                    -- If no tool, spam the remote for fists
+                    local combatRemote = ReplicatedStorage:FindFirstChild("Combat")
+                    if combatRemote and combatRemote:FindFirstChild("RemoteEvent") then
+                        pcall(function() combatRemote.RemoteEvent:FireServer("Button1", true) end)
+                    else
+                        if VirtualUser then
+                            VirtualUser:CaptureController()
+                            VirtualUser:ClickButton1(Vector2.new(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2), workspace.CurrentCamera.CFrame)
+                        end
                     end
                 end
             end
@@ -256,4 +253,4 @@ local bRgt=Instance.new("TextLabel",bot); bRgt.Size=UDim2.fromOffset(200,20); bR
 
 for n,b in pairs(tBts) do b.BackgroundColor3=n=="Home" and Theme.Accent or Theme.Panel b.TextColor3=n=="Home" and Theme.Text or Theme.Muted end
 pgs["Home"].Visible=true
-print("NOVAHUB Loaded with Bare Fists Fix.")
+print("NOVAHUB Loaded with Instant Snipe & Remote Spam.")
