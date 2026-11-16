@@ -7,7 +7,8 @@ local LP=Players.LocalPlayer
 if CoreGui:FindFirstChild("NOVAHUB") then CoreGui.NOVAHUB:Destroy() end
 
 local Theme={Bg=Color3.fromRGB(15,12,20),Panel=Color3.fromRGB(24,20,30),Accent=Color3.fromRGB(145,75,255),Text=Color3.fromRGB(255,255,255),Muted=Color3.fromRGB(150,150,160),Off=Color3.fromRGB(60,50,70),Border=Color3.fromRGB(70,40,100)}
-local States={AutoFarm=false,KillAura=false,ESP=false,FastAttack=false,AutoParry=false,AutoDodge=false,Hitbox=false}
+local States={AutoFarm=false,KillAura=false,ESP=false,FastAttack=false,AutoParry=false,AutoDodge=false,Hitbox=false, FruitESP=false, PlayerESP=false, InfJump=false}
+local Config={WalkSpeed=16}
 local Connections={}
 local function AddConn(c) table.insert(Connections,c) end
 
@@ -22,10 +23,6 @@ loadingGui.Size=UDim2.fromScale(1,1)
 loadingGui.BackgroundColor3=Color3.fromRGB(10,5,15)
 loadingGui.BorderSizePixel=0
 loadingGui.ZIndex=100
-
-local bgGrad=Instance.new("UIGradient",loadingGui)
-bgGrad.Color=ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.fromRGB(10,5,15)),ColorSequenceKeypoint.new(1,Color3.fromRGB(40,10,60))}
-bgGrad.Rotation=45
 
 local bigText=Instance.new("TextLabel",loadingGui)
 bigText.Size=UDim2.new(1,0,0,100); bigText.Position=UDim2.new(0,0,0.3,0)
@@ -150,8 +147,8 @@ profile.Size=UDim2.fromOffset(200,50); profile.Position=UDim2.fromOffset(0,410)
 profile.BackgroundColor3=Theme.Panel; Instance.new("UICorner",profile).CornerRadius=UDim.new(0,8)
 local pIcon=Instance.new("TextLabel",profile); pIcon.Size=UDim2.fromOffset(30,30); pIcon.Position=UDim2.fromOffset(10,10); pIcon.BackgroundTransparency=1; pIcon.Text="👑"; pIcon.TextSize=20; pIcon.TextColor3=Theme.Accent
 local pName=Instance.new("TextLabel",profile); pName.Size=UDim2.fromOffset(130,15); pName.Position=UDim2.fromOffset(45,10); pName.BackgroundTransparency=1; pName.Text="User: "..LP.Name; pName.TextColor3=Theme.Text; pName.Font=Enum.Font.GothamBold; pName.TextSize=12; pName.TextXAlignment=Enum.TextXAlignment.Left
-local pStatus=Instance.new("TextLabel",profile); pStatus.Size=UDim2.fromOffset(130,15); pStatus.Position=UDim2.fromOffset(45,25); pStatus.BackgroundTransparency=1; pStatus.Text="Status: "; pStatus.TextColor3=Theme.Muted; pStatus.Font=Enum.Font.Gotham; pStatus.TextSize=10; pStatus.TextXAlignment=Enum.TextXAlignment.Left
-local pDot=Instance.new("Frame",profile); pDot.Size=UDim2.fromOffset(8,8); pDot.Position=UDim2.fromOffset(90,29); pDot.BackgroundColor3=Color3.fromRGB(0,255,100); pDot.BackgroundTransparency=0; Instance.new("UICorner",pDot).CornerRadius=UDim.new(1,0)
+local pStatus=Instance.new("TextLabel",profile); pStatus.Size=UDim2.fromOffset(50,15); pStatus.Position=UDim2.fromOffset(45,25); pStatus.BackgroundTransparency=1; pStatus.Text="Status:"; pStatus.TextColor3=Theme.Muted; pStatus.Font=Enum.Font.Gotham; pStatus.TextSize=10; pStatus.TextXAlignment=Enum.TextXAlignment.Left
+local pDot=Instance.new("Frame",profile); pDot.Size=UDim2.fromOffset(8,8); pDot.Position=UDim2.fromOffset(80,28); pDot.BackgroundColor3=Color3.fromRGB(0,255,100); pDot.BackgroundTransparency=0; Instance.new("UICorner",pDot).CornerRadius=UDim.new(1,0)
 
 -- FOOTER
 local bot=Instance.new("Frame",main); bot.Size=UDim2.new(1,-40,0,20); bot.Position=UDim2.new(0,20,1,-30); bot.BackgroundTransparency=1
@@ -196,21 +193,21 @@ local function MakeSlider(parent,text,y,cb)
     local f=Instance.new("Frame",parent)
     f.Size=UDim2.new(1,-30,0,40); f.Position=UDim2.fromOffset(15,y); f.BackgroundTransparency=1
     local l=Instance.new("TextLabel",f)
-    l.Size=UDim2.new(1,0,0,20); l.BackgroundTransparency=1; l.Text=text..": 50"; l.TextColor3=Theme.Text; l.Font=Enum.Font.Gotham; l.TextSize=12; l.TextXAlignment=Enum.TextXAlignment.Left
+    l.Size=UDim2.new(1,0,0,20); l.BackgroundTransparency=1; l.Text=text..": 16"; l.TextColor3=Theme.Text; l.Font=Enum.Font.Gotham; l.TextSize=12; l.TextXAlignment=Enum.TextXAlignment.Left
     local bg=Instance.new("Frame",f)
     bg.Size=UDim2.new(1,0,0,4); bg.Position=UDim2.fromOffset(0,25); bg.BackgroundColor3=Theme.Off
     Instance.new("UICorner",bg).CornerRadius=UDim.new(1,0)
     local fill=Instance.new("Frame",bg)
-    fill.Size=UDim2.new(0.5,0,1,0); fill.BackgroundColor3=Theme.Accent
+    fill.Size=UDim2.new(0.2,0,1,0); fill.BackgroundColor3=Theme.Accent
     Instance.new("UICorner",fill).CornerRadius=UDim.new(1,0)
     local knob=Instance.new("Frame",bg)
-    knob.Size=UDim2.fromOffset(12,12); knob.Position=UDim2.new(0.5,-6,0.5,-6); knob.BackgroundColor3=Theme.Text
+    knob.Size=UDim2.fromOffset(12,12); knob.Position=UDim2.new(0.2,-6,0.5,-6); knob.BackgroundColor3=Theme.Text
     Instance.new("UICorner",knob).CornerRadius=UDim.new(1,0)
     local dr=false
     local function upd(i)
         local p=math.clamp((i.Position.X-bg.AbsolutePosition.X)/bg.AbsoluteSize.X,0,1)
         fill.Size=UDim2.new(p,0,1,0); knob.Position=UDim2.new(p,-6,0.5,-6)
-        local v=math.floor(p*100); l.Text=text..": "..v; cb(v)
+        local v=math.floor(16+(p*184)); l.Text=text..": "..v; cb(v)
     end
     AddConn(bg.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dr=true;upd(i) end end))
     AddConn(UserInputService.InputChanged:Connect(function(i) if dr and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then upd(i) end end))
@@ -227,19 +224,22 @@ end
 local banner=MakeSection(pages["Home"],"",0,0,600,110)
 banner.BackgroundColor3=Color3.fromRGB(30,20,40)
 local bTitle=Instance.new("TextLabel",banner)
-bTitle.Size=UDim2.new(1,-180,0,30); bTitle.Position=UDim2.fromOffset(20,25); bTitle.BackgroundTransparency=1
+bTitle.Size=UDim2.fromOffset(300,30); bTitle.Position=UDim2.fromOffset(20,25); bTitle.BackgroundTransparency=1
 bTitle.Text="Welcome to NOVAHUB!"; bTitle.TextColor3=Theme.Text; bTitle.Font=Enum.Font.GothamBold; bTitle.TextSize=24; bTitle.TextXAlignment=Enum.TextXAlignment.Left
 local bSub=Instance.new("TextLabel",banner)
-bSub.Size=UDim2.new(1,-180,0,20); bSub.Position=UDim2.fromOffset(20,60); bSub.BackgroundTransparency=1
+bSub.Size=UDim2.fromOffset(300,20); bSub.Position=UDim2.fromOffset(20,60); bSub.BackgroundTransparency=1
 bSub.Text="The ultimate script hub for Roblox."; bSub.TextColor3=Theme.Muted; bSub.Font=Enum.Font.Gotham; bSub.TextSize=14; bSub.TextXAlignment=Enum.TextXAlignment.Left
-MakeBtn(banner,"Join Our Discord",35,function() end).Position=UDim2.new(1,-180,0,35)
-banner:FindFirstChildOfClass("TextButton").Size=UDim2.fromOffset(150,40)
+
+local joinBtn=Instance.new("TextButton",banner)
+joinBtn.Size=UDim2.fromOffset(150,35); joinBtn.Position=UDim2.new(1,-170,1,-50)
+joinBtn.BackgroundColor3=Theme.Accent; joinBtn.Text="Join Our Discord"; joinBtn.TextColor3=Theme.Text; joinBtn.Font=Enum.Font.GothamBold; joinBtn.TextSize=13
+Instance.new("UICorner",joinBtn).CornerRadius=UDim.new(0,6)
 
 local qa=MakeSection(pages["Home"],"Quick Actions",0,125,290,210)
-MakeBtn(qa,"Auto Farm",40,function() States.AutoFarm=not States.AutoFarm end)
-MakeBtn(qa,"Kill Aura",85,function() States.KillAura=not States.KillAura end)
-MakeBtn(qa,"ESP",130,function() States.ESP=not States.ESP end)
-MakeBtn(qa,"Teleport to Spawn",175,function() end)
+MakeToggle(qa,"Fruit ESP",40,function(v) States.FruitESP=v end)
+MakeToggle(qa,"Player ESP",80,function(v) States.PlayerESP=v end)
+MakeToggle(qa,"Infinite Jump",120,function(v) States.InfJump=v end)
+MakeSlider(qa,"Walk Speed",160,function(v) Config.WalkSpeed=v end)
 
 local frm=MakeSection(pages["Home"],"Farming",305,125,290,210)
 MakeToggle(frm,"Auto Farm",45,function(v) States.AutoFarm=v end)
