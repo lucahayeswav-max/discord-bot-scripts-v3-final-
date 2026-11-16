@@ -174,12 +174,34 @@ task.spawn(function()
     end
 end)
 
+-- COMBAT LOGIC (AUTO ATTACK)
+local autoAttack = false
+local fastAttackSpeed = 0.1
+
 local cmb=UILib.MakeSection(pgs["Combat"],"Combat Settings",0,0,600,250)
-UILib.MakeToggle(cmb,"Fast Attack",40,function() end)
-UILib.MakeToggle(cmb,"Hitbox Expander",80,function() end)
-UILib.MakeToggle(cmb,"Auto Parry",120,function() end)
-UILib.MakeToggle(cmb,"Auto Dodge",160,function() end)
-UILib.MakeToggle(cmb,"Kill Aura",200,function() end)
+UILib.MakeToggle(cmb,"Auto Attack",40,function(v) autoAttack = v end)
+UILib.MakeSlider(cmb,"Fast Attack Speed",80,1,50,10,function(v) fastAttackSpeed = v / 100 end)
+UILib.MakeToggle(cmb,"Hitbox Expander",130,function() end)
+UILib.MakeToggle(cmb,"Auto Parry",170,function() end)
+
+task.spawn(function()
+    while task.wait(fastAttackSpeed) do
+        if autoAttack then
+            local ch = LP.Character
+            if ch then
+                local tool = ch:FindFirstChildOfClass("Tool")
+                if tool then
+                    tool:Activate()
+                else
+                    if VirtualUser then
+                        VirtualUser:CaptureController()
+                        VirtualUser:ClickButton1(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                    end
+                end
+            end
+        end
+    end
+end)
 
 local tp=UILib.MakeSection(pgs["Teleport"],"Teleport Locations",0,0,600,250)
 UILib.MakeBtn(tp,"Teleport to Spawn",40,function() end)
@@ -233,4 +255,4 @@ local bRgt=Instance.new("TextLabel",bot); bRgt.Size=UDim2.fromOffset(200,20); bR
 
 for n,b in pairs(tBts) do b.BackgroundColor3=n=="Home" and Theme.Accent or Theme.Panel b.TextColor3=n=="Home" and Theme.Text or Theme.Muted end
 pgs["Home"].Visible=true
-print("NOVAHUB Loaded with Auto Farm.")
+print("NOVAHUB Loaded with Auto Attack.")
