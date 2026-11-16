@@ -102,7 +102,8 @@ end)
 -- 2. MAIN DASHBOARD
 local main=Instance.new("Frame",gui)
 main.Size=UDim2.fromOffset(850,550)
-main.Position=UDim2.new(0.5,-425,0.5,-275)
+main.Position=UDim2.new(0.5,0,0.5,0)
+main.AnchorPoint=Vector2.new(0.5,0.5) -- THIS FIXES THE CORNER ISSUE
 main.BackgroundColor3=Theme.Bg
 main.BorderSizePixel=0
 main.Active=true
