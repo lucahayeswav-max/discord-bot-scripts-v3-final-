@@ -123,8 +123,6 @@ for i,tab in ipairs(tabs) do
         TweenService:Create(selBar,TweenInfo.new(0.2),{Position=UDim2.fromOffset(0,(i-1)*45)}):Play()
     end))
 end
-
--- Notifications
 local notifFrame=Instance.new("Frame",gui)
 notifFrame.Size=UDim2.fromOffset(300,50); notifFrame.Position=UDim2.new(1,-320,1,-80); notifFrame.BackgroundColor3=Theme.Panel
 notifFrame.BackgroundTransparency=1; notifFrame.ZIndex=200
@@ -144,7 +142,6 @@ local function Notify(msg)
     end)
 end
 
--- Home Page
 local clock=Instance.new("TextLabel",pages["Home"])
 clock.Size=UDim2.fromOffset(200,30); clock.Position=UDim2.new(1,-200,0,-5); clock.BackgroundTransparency=1; clock.TextColor3=Theme.Accent; clock.Font=Enum.Font.GothamBold; clock.TextSize=16; clock.TextXAlignment=Enum.TextXAlignment.Right
 task.spawn(function() while task.wait(1) do clock.Text=os.date("%I:%M:%S %p | %b %d, %Y") end end)
@@ -185,7 +182,6 @@ UILib.MakeToggle(vis,"Names",85,function(v) end)
 UILib.MakeToggle(vis,"Boxes",125,function(v) end)
 UILib.MakeToggle(vis,"Tracers",165,function(v) end)
 
--- Other Tabs
 local frm=UILib.MakeSection(pages["Farming"],"Farming Settings",0,0,600,250)
 UILib.MakeToggle(frm,"Auto Farm",40,function() end); UILib.MakeSlider(frm,"Farm Range",80,10,200,50,function() end); UILib.MakeSlider(frm,"Attack Speed",140,1,50,10,function() end); UILib.MakeToggle(frm,"Auto Set Spawn",190,function() end)
 
@@ -226,7 +222,6 @@ local cred=UILib.MakeSection(pages["Credits"],"Credits",0,0,600,250)
 local cl=Instance.new("TextLabel",cred); cl.Size=UDim2.new(1,-30,1,-50); cl.Position=UDim2.fromOffset(15,40); cl.BackgroundTransparency=1
 cl.Text="Made by lucahayeswav-max\nPowered by NOVAHUB\n\nDiscord: lucahayeswav-max"; cl.TextColor3=Theme.Text; cl.Font=Enum.Font.Gotham; cl.TextSize=14; cl.TextXAlignment=Enum.TextXAlignment.Left; cl.TextYAlignment=Enum.TextYAlignment.Top
 
--- Profile & Footer
 local profile=Instance.new("Frame",sideBar)
 profile.Size=UDim2.fromOffset(200,60); profile.Position=UDim2.fromOffset(0,400); profile.BackgroundColor3=Theme.Panel; profile.BackgroundTransparency=0.2
 Instance.new("UICorner",profile).CornerRadius=UDim.new(0,8); Instance.new("UIStroke",profile).Color=Theme.Border
