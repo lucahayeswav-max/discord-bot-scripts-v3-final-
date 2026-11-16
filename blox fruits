@@ -2,6 +2,7 @@ local Players=game:GetService("Players")
 local UserInputService=game:GetService("UserInputService")
 local TweenService=game:GetService("TweenService")
 local CoreGui=game:GetService("CoreGui")
+local VirtualUser=game:GetService("VirtualUser")
 local LP=Players.LocalPlayer
 
 local UILib=loadstring(game:HttpGet("https://raw.githubusercontent.com/lucahayeswav-max/discord-bot-scripts-v3-final-/main/ui_core.lua"))()
@@ -130,11 +131,48 @@ UILib.MakeToggle(vis,"Names",85,function(v) end)
 UILib.MakeToggle(vis,"Boxes",125,function(v) end)
 UILib.MakeToggle(vis,"Tracers",165,function(v) end)
 
+-- FARMING LOGIC
+local farmState = false
+local farmRange = 50
+local attackSpeed = 0.1
+local flyToken = 0
+
 local frm=UILib.MakeSection(pgs["Farming"],"Farming Settings",0,0,600,250)
-UILib.MakeToggle(frm,"Auto Farm",40,function() end)
-UILib.MakeSlider(frm,"Farm Range",80,10,200,50,function() end)
-UILib.MakeSlider(frm,"Attack Speed",140,1,50,10,function() end)
+UILib.MakeToggle(frm,"Auto Farm",40,function(v) farmState = v end)
+UILib.MakeSlider(frm,"Farm Range",80,10,200,50,function(v) farmRange = v end)
+UILib.MakeSlider(frm,"Attack Speed",140,1,50,10,function(v) attackSpeed = v / 100 end)
 UILib.MakeToggle(frm,"Auto Set Spawn",190,function() end)
+
+task.spawn(function()
+    while task.wait(attackSpeed) do
+        if farmState then
+            local ch = LP.Character
+            if not ch or not ch:FindFirstChild("HumanoidRootPart") then continue end
+            local closestEnemy, shortestDist = nil, math.huge
+            local enemies = workspace:FindFirstChild("Enemies")
+            if enemies then
+                for _, v in pairs(enemies:GetChildren()) do
+                    if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                        local dist = (ch.HumanoidRootPart.Position - v.HumanoidRootPart.Position).Magnitude
+                        if dist < shortestDist and dist <= farmRange then shortestDist = dist closestEnemy = v end
+                    end
+                end
+            end
+            if closestEnemy then
+                if shortestDist > 5 then
+                    flyToken = flyToken + 1
+                    local myToken = flyToken
+                    local tween = TweenService:Create(ch.HumanoidRootPart, TweenInfo.new(1, Enum.EasingStyle.Linear), {CFrame = closestEnemy.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)})
+                    tween:Play()
+                end
+                if VirtualUser then
+                    VirtualUser:CaptureController()
+                    VirtualUser:ClickButton1(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                end
+            end
+        end
+    end
+end)
 
 local cmb=UILib.MakeSection(pgs["Combat"],"Combat Settings",0,0,600,250)
 UILib.MakeToggle(cmb,"Fast Attack",40,function() end)
@@ -195,4 +233,4 @@ local bRgt=Instance.new("TextLabel",bot); bRgt.Size=UDim2.fromOffset(200,20); bR
 
 for n,b in pairs(tBts) do b.BackgroundColor3=n=="Home" and Theme.Accent or Theme.Panel b.TextColor3=n=="Home" and Theme.Text or Theme.Muted end
 pgs["Home"].Visible=true
-print("NOVAHUB Loaded.")
+print("NOVAHUB Loaded with Auto Farm.")
