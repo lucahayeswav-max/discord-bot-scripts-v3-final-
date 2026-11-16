@@ -3,6 +3,7 @@ local UserInputService=game:GetService("UserInputService")
 local TweenService=game:GetService("TweenService")
 local CoreGui=game:GetService("CoreGui")
 local VirtualUser=game:GetService("VirtualUser")
+local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local LP=Players.LocalPlayer
 
 local UILib=loadstring(game:HttpGet("https://raw.githubusercontent.com/lucahayeswav-max/discord-bot-scripts-v3-final-/main/ui_core.lua"))()
@@ -174,7 +175,7 @@ task.spawn(function()
     end
 end)
 
--- COMBAT LOGIC (AUTO ATTACK)
+-- COMBAT LOGIC (FIXED AUTO ATTACK REMOTE)
 local autoAttack = false
 local fastAttackSpeed = 0.1
 
@@ -184,21 +185,28 @@ UILib.MakeSlider(cmb,"Fast Attack Speed",80,1,50,10,function(v) fastAttackSpeed 
 UILib.MakeToggle(cmb,"Hitbox Expander",130,function() end)
 UILib.MakeToggle(cmb,"Auto Parry",170,function() end)
 
+local function doMeleeAttack()
+    local combatRemote = ReplicatedStorage:FindFirstChild("Combat")
+    if combatRemote and combatRemote:FindFirstChild("RemoteEvent") then
+        combatRemote.RemoteEvent:FireServer("Button1", true)
+    else
+        local ch = LP.Character
+        if ch then
+            local tool = ch:FindFirstChildOfClass("Tool")
+            if tool then
+                tool:Activate()
+            elseif VirtualUser then
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton1(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            end
+        end
+    end
+end
+
 task.spawn(function()
     while task.wait(fastAttackSpeed) do
         if autoAttack then
-            local ch = LP.Character
-            if ch then
-                local tool = ch:FindFirstChildOfClass("Tool")
-                if tool then
-                    tool:Activate()
-                else
-                    if VirtualUser then
-                        VirtualUser:CaptureController()
-                        VirtualUser:ClickButton1(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-                    end
-                end
-            end
+            doMeleeAttack()
         end
     end
 end)
@@ -255,4 +263,4 @@ local bRgt=Instance.new("TextLabel",bot); bRgt.Size=UDim2.fromOffset(200,20); bR
 
 for n,b in pairs(tBts) do b.BackgroundColor3=n=="Home" and Theme.Accent or Theme.Panel b.TextColor3=n=="Home" and Theme.Text or Theme.Muted end
 pgs["Home"].Visible=true
-print("NOVAHUB Loaded with Auto Attack.")
+print("NOVAHUB Loaded with Fixed Auto Attack.")
